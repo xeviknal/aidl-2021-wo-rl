@@ -15,16 +15,19 @@ class CarRacingEnv:
         super().__init__()
         self.env = wrap_env(gym.make("CarRacing-v0"))
         self.total_rew = 0
+        self.ob = None
+        self.done = False
         self.device = device
 
     def reset(self):
-        self.env.reset()
+        self.ob, self.done, self.total_rew = self.env.reset(), False, 0
 
     def rand_episode_run(self):
-        self.env.render()
-        ac = self.env.action_space.sample()
-        ob, rew, done, info = self.env.step(ac)
-        self.total_rew += rew
+        while not self.done:
+            self.env.render()
+            ac = self.env.action_space.sample()
+            self.ob, rew, self.done, info = self.env.step(ac)
+            self.total_rew += rew
 
     def print_reward(self):
         print('Total Reward obtained: {0}'.format(self.total_rew))
