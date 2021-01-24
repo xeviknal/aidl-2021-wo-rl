@@ -1,4 +1,5 @@
 gym
+gym[box2d]
 box2d
 pyvirtualdisplay
 IPython
