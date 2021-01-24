@@ -1,16 +1,22 @@
 import torch
 from environment import CarRacingEnv
 from helpers import show_video, display_start
+from trainer import Trainer
 
 # if gpu is to be used
 device = torch.device("cuda") if False else torch.device("cpu")
 
-env = CarRacingEnv(device)
-env.reset()
-env.rand_episode_run()
-#env.close()
-env.print_reward()
-show_video()
-
 if __name__ == "__main__":
-    config = { }
+    hyperparams = {
+        'num_episodes': 1500,  # Number of training episodes
+        'lr': 1e-2,  # Learning rate
+        'gamma': 0.99,  # Discount rate
+        'log_interval': 10,  # controls how often we log progress
+        'num_episodes': 1500,  # number of episodes to train on
+    }
+
+    env = CarRacingEnv(device)
+    print(env.reset())
+    trainer = Trainer(env, hyperparams)
+    trainer.train()
+
