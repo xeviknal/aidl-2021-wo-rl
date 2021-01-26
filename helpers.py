@@ -1,4 +1,3 @@
-from gym.wrappers import Monitor
 from pyvirtualdisplay import Display
 import glob
 import io
@@ -19,11 +18,6 @@ def show_video():
              </video>'''.format(encoded.decode('ascii'))))
     else:
         print("Could not find video")
-
-
-def wrap_env(env):
-    env = Monitor(env, './video', force=True)
-    return env
 
 
 def display_start():
