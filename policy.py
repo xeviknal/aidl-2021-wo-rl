@@ -3,7 +3,7 @@ import torch.nn as nn
 
 class Policy(nn.Module):
 
-    def __init__(self, inputs=3, outputs=8):
+    def __init__(self, inputs=6, outputs=8):
         super(Policy, self).__init__()
         self.pipeline = nn.Sequential(
             nn.Conv2d(inputs, 32, 3),  # [32, 94, 94]

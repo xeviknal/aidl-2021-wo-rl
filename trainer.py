@@ -11,14 +11,15 @@ class Trainer:
         self.env = env
         self.gamma = config['gamma']
         self.config = config
-        self.policy = Policy(3, len(Actions.available_actions))
+        self.policy = Policy(6, len(Actions.available_actions))
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
 
     def select_action(self, state):
         if state is None:
-            state = np.zeros((96, 96, 3), dtype=float)
-        state = state.copy()
-        state = torch.from_numpy(state).float().unsqueeze(0).view(1, 3, 96, 96)
+            state = np.zeros((6, 96, 96))
+        else:
+            state = np.asarray(state)
+        state = torch.from_numpy(state).float().unsqueeze(0).view(1, 6, 96, 96)
         # Pick the probs of a discrete number of action (discrete mode not supported)
         probs = self.policy(state)
         action_index = torch.argmax(probs, 1)
@@ -47,6 +48,8 @@ class Trainer:
         policy_loss = torch.cat(policy_loss, 0).sum()
         policy_loss.backward()
         self.optimizer.step()
+        print(len(self.policy.rewards))
+        print(len(self.policy.saved_log_probs))
         del self.policy.rewards[:]
         del self.policy.saved_log_probs[:]
 
@@ -61,6 +64,7 @@ class Trainer:
             for t in range(self.env.spec().max_episode_steps):  # Protecting from scenarios where you are mostly stopped
                 action = self.select_action(state)
                 state, reward, done, _ = self.env.step(action)
+                print([reward, done])
                 self.policy.rewards.append(reward)
                 ep_reward += reward
                 if done:
