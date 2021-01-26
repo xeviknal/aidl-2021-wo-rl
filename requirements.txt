@@ -4,3 +4,5 @@ box2d
 pyvirtualdisplay
 IPython
 torch
+torchvision
+opencv-python

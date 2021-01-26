@@ -1,17 +1,21 @@
 import gym
-
-from helpers import wrap_env
+from gym.wrappers import Monitor, FrameStack, GrayScaleObservation
 
 
 class CarRacingEnv:
 
     def __init__(self, device):
         super().__init__()
-        self.env = wrap_env(gym.make("CarRacing-v0"))
         self.total_rew = 0
         self.state = None
         self.done = False
         self.device = device
+
+        self.env = gym.make("CarRacing-v0")
+        self.env = GrayScaleObservation(self.env)
+        self.env = FrameStack(self.env, 6)
+        self.env = Monitor(self.env, './video', force=True)
+        print(self.env.observation_space)
 
     def step(self, action):
         return self.env.step(action)
