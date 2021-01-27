@@ -45,7 +45,7 @@ class Trainer:
 
         # Update policy:
         self.optimizer.zero_grad()
-        policy_loss = torch.cat(policy_loss, 0).sum()
+        policy_loss = torch.cat(policy_loss).sum()
         policy_loss.backward()
         self.optimizer.step()
         print(len(self.policy.rewards))
