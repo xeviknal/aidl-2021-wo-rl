@@ -1,4 +1,5 @@
 from pyvirtualdisplay import Display
+import torch
 import glob
 import io
 import base64
@@ -23,3 +24,7 @@ def show_video():
 def display_start():
     display = Display(visible=0, size=(1400, 900))
     display.start()
+
+
+def save_model(model, path):
+    torch.save(model.state_dict(), path)
