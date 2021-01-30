@@ -11,8 +11,9 @@ if __name__ == "__main__":
         'num_episodes': 1500,  # Number of training episodes
         'lr': 1e-2,  # Learning rate
         'gamma': 0.99,  # Discount rate
-        'log_interval': 1,  # controls how often we log progress
+        'log_interval': 10,  # controls how often we log progress
         'stack_frames': 4,
+        'params_path': './params/policy-params.dl'
     }
 
     env = CarRacingEnv(device, hyperparams['stack_frames'])
