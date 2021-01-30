@@ -12,7 +12,7 @@ class Trainer:
         self.env = env
         self.gamma = config['gamma']
         self.config = config
-        self.input_channels = 4
+        self.input_channels = config['stack_frames']
         self.policy = Policy(self.input_channels, len(Actions.available_actions))
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
 
