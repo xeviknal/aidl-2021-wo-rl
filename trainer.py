@@ -14,6 +14,7 @@ class Trainer:
         self.config = config
         self.input_channels = config['stack_frames']
         self.policy = Policy(self.input_channels, len(Actions.available_actions))
+        self.policy.load_checkpoint(config['params_path'])
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
 
     def select_action(self, state):
@@ -82,7 +83,7 @@ class Trainer:
             if i_episode % self.config['log_interval'] == 0:
                 print('Episode {}\tLast reward: {:.2f}\tAverage reward: {:.2f}'.format(
                     i_episode, ep_reward, running_reward))
-                save_model(self.policy, './params/policy-params.dl')
+                self.policy.save_checkpoint('./params/policy-params.dl')
 
             if running_reward > self.env.spec().reward_threshold:
                 print("Solved!")
