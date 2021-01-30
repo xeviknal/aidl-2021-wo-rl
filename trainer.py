@@ -17,11 +17,12 @@ class Trainer:
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
 
     def select_action(self, state):
-        if state is None:
+        if state is None:  # First state is always None
+            # Adding the starting signal as a 0's tensor
             state = np.zeros((self.input_channels, 96, 96))
         else:
             state = np.asarray(state)
-        state = torch.from_numpy(state).float().unsqueeze(0).view(1, self.input_channels, 96, 96)
+        state = torch.from_numpy(state).float().unsqueeze(0)
         # Pick the probs of a discrete number of action (discrete mode not supported)
         probs = self.policy(state)
         action_index = torch.argmax(probs, 1)
