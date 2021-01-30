@@ -1,4 +1,6 @@
+import torch
 import torch.nn as nn
+from os import path
 
 
 class Policy(nn.Module):
@@ -23,3 +25,14 @@ class Policy(nn.Module):
 
     def forward(self, x):
         return self.pipeline(x)
+
+    def load_checkpoint(self, params_path):
+        if path.exists(params_path):
+            self.load_state_dict(torch.load(params_path))
+            print("Model params are loaded now")
+        else:
+            print("Params not found: training from scratch")
+
+    def save_checkpoint(self, params_path):
+        torch.save(self.state_dict(), params_path)
+        print("Relax, params are saved now")
