@@ -16,7 +16,6 @@ if __name__ == "__main__":
     }
 
     env = CarRacingEnv(device, hyperparams['stack_frames'])
-    print(env.reset())
     trainer = Trainer(env, hyperparams)
     trainer.train()
 
