@@ -1,7 +1,8 @@
 #/bin/sh
 
+## Install for the GCE, not for the local machine
+
 sudo apt-get install wget
-sudo apt-get install python-opengl
 sudo apt-get install -y xvfb python-opengl ffmpeg
 sudo apt-get install xserver-xorg-core
 sudo apt-get install tigervnc-standalone-server tigervnc-xorg-extension tigervnc-viewer

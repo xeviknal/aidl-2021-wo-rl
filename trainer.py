@@ -2,7 +2,6 @@ import torch
 import numpy as np
 from policy import Policy
 from actions import Actions
-from helpers import save_model
 
 
 class Trainer:
@@ -24,11 +23,13 @@ class Trainer:
         else:
             state = np.asarray(state)
         state = torch.from_numpy(state).float().unsqueeze(0)
-        # Pick the probs of a discrete number of action (discrete mode not supported)
         probs = self.policy(state)
-        action_index = torch.argmax(probs, 1)
-        self.policy.saved_log_probs.append(probs[0][action_index])
-        return Actions[action_index.item()]
+        # We pick the action from a sample of the probabilities
+        # It prevents the model from picking always the same action
+        m = torch.distributions.Categorical(probs)
+        action = m.sample()
+        self.policy.saved_log_probs.append(m.log_prob(action))
+        return Actions[action.item()]
 
     def episode_train(self):
         g = 0
@@ -52,8 +53,6 @@ class Trainer:
         policy_loss = torch.cat(policy_loss).sum()
         policy_loss.backward()
         self.optimizer.step()
-        print(len(self.policy.rewards))
-        print(len(self.policy.saved_log_probs))
         del self.policy.rewards[:]
         del self.policy.saved_log_probs[:]
 
