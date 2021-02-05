@@ -3,7 +3,7 @@ import torch
 from environment import CarRacingEnv
 from trainer import Trainer
 
-# if gpu is to be used
+# if gpu is to be used. unfortunately my linux doesn't have drivers for that.
 device = torch.device("cuda") if False else torch.device("cpu")
 
 # Main loop
