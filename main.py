@@ -6,6 +6,7 @@ from trainer import Trainer
 # if gpu is to be used
 device = torch.device("cuda") if False else torch.device("cpu")
 
+# Main loop
 if __name__ == "__main__":
     hyperparams = {
         'num_episodes': 1250,  # Number of training episodes
