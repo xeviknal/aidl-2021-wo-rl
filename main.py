@@ -11,7 +11,7 @@ if __name__ == "__main__":
         'num_episodes': 1250,  # Number of training episodes
         'lr': 1e-2,  # Learning rate
         'gamma': 0.99,  # Discount rate
-        'log_interval': 10,  # controls how often we log progress
+        'log_interval': 5,  # controls how often we log progress
         'stack_frames': 4,
         'params_path': './params/policy-params.dl'
     }
