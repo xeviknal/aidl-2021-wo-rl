@@ -8,7 +8,7 @@ device = torch.device("cuda") if False else torch.device("cpu")
 
 if __name__ == "__main__":
     hyperparams = {
-        'num_episodes': 1250,  # Number of training episodes
+        'num_episodes': 300000,  # Number of training episodes
         'lr': 1e-3,  # Learning rate
         'gamma': 0.99,  # Discount rate
         'log_interval': 10,  # controls how often we log progress
