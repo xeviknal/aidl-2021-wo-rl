@@ -95,5 +95,4 @@ class Trainer:
                 print("Solved!")
                 break
 
-        print("Finished training! Running reward is now {:.2f} and "
-              "the last episode runs to {} time steps!".format(running_reward, t))
+        print("Finished training! Running reward is now {:.2f}".format(running_reward))
