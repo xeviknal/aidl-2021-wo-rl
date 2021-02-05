@@ -27,12 +27,25 @@ class Policy(nn.Module):
         return self.pipeline(x)
 
     def load_checkpoint(self, params_path):
+        epoch = 0
         if path.exists(params_path):
-            self.load_state_dict(torch.load(params_path))
+            params_descriptor = torch.load(params_path)
+            epoch = 0
+            if 'params' in params_descriptor:
+                self.load_state_dict(params_descriptor['params'])
+                epoch = params_descriptor['epoch']
+            else:
+                self.load_state_dict(params_descriptor)
+
             print("Model params are loaded now")
         else:
             print("Params not found: training from scratch")
 
-    def save_checkpoint(self, params_path):
-        torch.save(self.state_dict(), params_path)
+        return epoch
+
+    def save_checkpoint(self, params_path, epoch):
+        torch.save({
+            'epoch': epoch,
+            'params': self.state_dict(),
+        }, params_path)
         print("Relax, params are saved now")

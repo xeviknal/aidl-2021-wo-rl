@@ -6,3 +6,4 @@ IPython
 torch
 torchvision
 opencv-python
+tensorboard
