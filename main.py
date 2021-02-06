@@ -3,6 +3,10 @@ import torch
 from environment import CarRacingEnv
 from trainer import Trainer
 
+from pyvirtualdisplay import Display
+display = Display(visible=0, size=(1400, 900))
+display.start()
+
 # if gpu is to be used
 device = torch.device("cuda") if False else torch.device("cpu")
 
