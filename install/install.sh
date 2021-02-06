@@ -4,7 +4,7 @@
 
 sudo apt-get install wget
 sudo apt-get install -y xvfb python-opengl ffmpeg
-sudo apt-get install xserver-xorg-core
+sudo apt-get install xserver-xorg-core xorg-x11-server-Xvfb
 sudo apt-get install tigervnc-standalone-server tigervnc-xorg-extension tigervnc-viewer
 sudo apt-get install htop
 
