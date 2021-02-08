@@ -1,11 +1,12 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from os import path
 
 
 class Policy(nn.Module):
 
-    def __init__(self, inputs=4, outputs=8):
+    def __init__(self, actor_output, critic_output, inputs=4):
         super(Policy, self).__init__()
         self.pipeline = nn.Sequential(
             nn.Conv2d(inputs, 32, 3),  # [32, 94, 94]
@@ -17,14 +18,35 @@ class Policy(nn.Module):
             nn.Flatten(),
             nn.Linear(64 * 22 * 22, 512),
             nn.ReLU(),
-            nn.Linear(512, outputs),
-            nn.LogSoftmax(dim=-1)
+            nn.Linear(512, 128),
+#            nn.LogSoftmax(dim=-1)
+            nn.ReLU()
         )
+
+        # actor's layer
+        self.actor_head = nn.Linear(128, actor_output)
+
+        # critic's layer
+        self.critic_head = nn.Linear(128, critic_output)
+
         self.saved_log_probs = []
         self.rewards = []
 
     def forward(self, x):
-        return self.pipeline(x)
+       
+        x= self.pipeline(x)
+        # actor: choses action to take from state s_t 
+        # by returning probability of each action
+        action_prob = F.softmax(self.actor_head(x), dim=-1)
+
+        # critic: evaluates being in the state s_t
+        state_values = self.critic_head(x)
+
+        # return values for both actor and critic as a tuple of 2 values:
+        # 1. a list with the probability of each action over the action space
+        # 2. the value from state s_t 
+        return action_prob, state_values
+#        return self.pipeline(x)
 
     def load_checkpoint(self, params_path):
         epoch = 0

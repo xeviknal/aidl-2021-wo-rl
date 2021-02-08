@@ -1,6 +1,9 @@
 import torch
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
+import torch.nn.functional as F
+from collections import namedtuple
+
 
 from policy import Policy
 from actions import Actions
@@ -10,12 +13,13 @@ class Trainer:
 
     def __init__(self, env, config):
         super().__init__()
+        self.SavedAction = namedtuple('SavedAction', ['log_prob', 'value'])
         self.env = env
         self.gamma = config['gamma']
         self.config = config
         self.input_channels = config['stack_frames']
         self.writer = SummaryWriter(flush_secs=5)
-        self.policy = Policy(self.input_channels, len(Actions.available_actions))
+        self.policy = Policy(len(Actions.available_actions), 1, self.input_channels)
         self.last_epoch = self.policy.load_checkpoint(config['params_path'])
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
 
@@ -25,18 +29,25 @@ class Trainer:
             state = np.zeros((self.input_channels, 96, 96))
         else:
             state = np.asarray(state)
-        state = torch.from_numpy(state).float().unsqueeze(0)
-        probs = self.policy(state)
+#        state = torch.from_numpy(state).float().unsqueeze(0)
+        state = torch.from_numpy(state).float().unsqueeze(0).view(1, self.input_channels, 96, 96)
+
+#        probs = self.policy(state)
+        probs, state_value = self.policy(state)
         # We pick the action from a sample of the probabilities
         # It prevents the model from picking always the same action
         m = torch.distributions.Categorical(probs)
         action = m.sample()
-        self.policy.saved_log_probs.append(m.log_prob(action))
+        #print(m.log_prob(action))
+        #self.policy.saved_log_probs.append(m.log_prob(action))
+        self.policy.saved_log_probs.append(self.SavedAction(m.log_prob(action), state_value))
+        #print(self.policy.saved_log_probs)
         return Actions[action.item()]
 
     def episode_train(self, iteration):
         g = 0
         policy_loss = []
+        value_losses = []
         returns = []
 
         for r in self.policy.rewards[::-1]:
@@ -47,13 +58,20 @@ class Trainer:
         # Normalize returns (this usually accelerates convergence)
         eps = np.finfo(np.float32).eps.item()
         returns = (returns - returns.mean()) / (returns.std() + eps)
+#        for log_prob, G in zip(self.policy.saved_log_probs, returns):
+        for (log_prob, baseline) ,G in zip(self.policy.saved_log_probs, returns):
+        #    policy_loss.append(-G * log_prob)
+            advantage = G - baseline.item()
+        # calculate actor (policy) loss 
+            policy_loss.append(-log_prob * advantage)
 
-        for log_prob, G in zip(self.policy.saved_log_probs, returns):
-            policy_loss.append(-G * log_prob)
+        # calculate critic (value) loss using L1 smooth loss
+            value_losses.append(F.smooth_l1_loss(baseline, torch.tensor([G])))
 
         # Update policy:
         self.optimizer.zero_grad()
-        policy_loss = torch.cat(policy_loss).sum()
+        #policy_loss = torch.cat(policy_loss).sum()
+        policy_loss = torch.stack(policy_loss).sum() + torch.stack(value_losses).sum()
         self.writer.add_scalar('loss', policy_loss.item(), iteration)
         policy_loss.backward()
         self.optimizer.step()
