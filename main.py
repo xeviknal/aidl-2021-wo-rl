@@ -8,7 +8,7 @@ display = Display(visible=0, size=(1400, 900))
 display.start()
 
 # if gpu is to be used
-device = torch.device("cuda") if False else torch.device("cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 if __name__ == "__main__":
     hyperparams = {
