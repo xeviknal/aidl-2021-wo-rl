@@ -104,6 +104,7 @@ class Trainer:
             self.episode_train(i_episode)
             ep_rew_history.append((i_episode, ep_reward))
             self.writer.add_scalar('reward', ep_reward, i_episode)
+            self.writer.add_scalar('running reward', running_reward, i_episode)
             if i_episode % self.config['log_interval'] == 0:
                 print('Episode {}\tLast reward: {:.2f}\tAverage reward: {:.2f}'.format(
                     i_episode, ep_reward, running_reward))
