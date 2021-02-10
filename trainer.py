@@ -18,8 +18,9 @@ class Trainer:
         self.gamma = config['gamma']
         self.config = config
         self.input_channels = config['stack_frames']
+        self.device = config['device']
         self.writer = SummaryWriter(flush_secs=5)
-        self.policy = Policy(len(Actions.available_actions), 1, self.input_channels)
+        self.policy = Policy(len(Actions.available_actions), 1, self.input_channels).to(self.device)
         self.last_epoch = self.policy.load_checkpoint(config['params_path'])
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
 
@@ -30,8 +31,7 @@ class Trainer:
         else:
             state = np.asarray(state)
 #        state = torch.from_numpy(state).float().unsqueeze(0)
-        state = torch.from_numpy(state).float().unsqueeze(0).view(1, self.input_channels, 96, 96)
-
+        state = torch.from_numpy(state).float().unsqueeze(0).view(1, self.input_channels, 96, 96).to(self.device)
 #        probs = self.policy(state)
         probs, state_value = self.policy(state)
         # We pick the action from a sample of the probabilities
@@ -54,7 +54,7 @@ class Trainer:
             g = r + self.gamma * g
             returns.insert(0, g)
 
-        returns = torch.tensor(returns)
+        returns = torch.tensor(returns).to(self.device)
         # Normalize returns (this usually accelerates convergence)
         eps = np.finfo(np.float32).eps.item()
         returns = (returns - returns.mean()) / (returns.std() + eps)

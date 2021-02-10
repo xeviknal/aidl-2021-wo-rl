@@ -17,6 +17,7 @@ if __name__ == "__main__":
         'gamma': 0.99,  # Discount rate
         'log_interval': 5,  # controls how often we log progress
         'stack_frames': 4,
+        'device': device,
         'params_path': './params/policy-params.dl'
     }
 
