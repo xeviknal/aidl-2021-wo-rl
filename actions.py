@@ -21,3 +21,10 @@ class Actions:
             return cls.available_actions[0]
         else:
             return cls.available_actions[item]
+
+    def __getitem__(cls, item):
+        if item > len(cls.available_actions) - 1:
+            print('Nobody is driving! Action not found: {0}'.format(item))
+            return cls.available_actions[0]
+        else:
+            return cls.available_actions[item]

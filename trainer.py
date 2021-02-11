@@ -33,7 +33,7 @@ class Trainer:
         m = torch.distributions.Categorical(probs)
         action = m.sample()
         self.policy.saved_log_probs.append(m.log_prob(action))
-        return Actions[action.item()]
+        return Actions()[action.item()]
 
     def episode_train(self, iteration):
         g = 0
