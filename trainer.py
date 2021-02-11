@@ -42,7 +42,7 @@ class Trainer:
         #self.policy.saved_log_probs.append(m.log_prob(action))
         self.policy.saved_log_probs.append(self.SavedAction(m.log_prob(action), state_value))
         #print(self.policy.saved_log_probs)
-        return Actions[action.item()]
+        return Actions()[action.item()]
 
     def episode_train(self, iteration):
         g = 0
