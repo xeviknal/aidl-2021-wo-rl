@@ -3,7 +3,7 @@ import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 
 from policy import Policy
-from actions import Actions
+from actions import available_actions
 
 
 class Trainer:
@@ -16,7 +16,7 @@ class Trainer:
         self.input_channels = config['stack_frames']
         self.device = config['device']
         self.writer = SummaryWriter(flush_secs=5)
-        self.policy = Policy(self.input_channels, len(Actions.available_actions)).to(self.device)
+        self.policy = Policy(self.input_channels, len(available_actions)).to(self.device)
         self.last_epoch = self.policy.load_checkpoint(config['params_path'])
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
 
@@ -33,7 +33,7 @@ class Trainer:
         m = torch.distributions.Categorical(probs)
         action = m.sample()
         self.policy.saved_log_probs.append(m.log_prob(action))
-        return Actions[action.item()]
+        return available_actions[action.item()]
 
     def episode_train(self, iteration):
         g = 0
@@ -91,7 +91,7 @@ class Trainer:
             if i_episode % self.config['log_interval'] == 0:
                 print('Episode {}\tLast reward: {:.2f}\tAverage reward: {:.2f}'.format(
                     i_episode, ep_reward, running_reward))
-                self.policy.save_checkpoint('./params/policy-params.dl', i_episode)
+                self.policy.save_checkpoint(self.config['params_path'], i_episode)
 
             if running_reward > self.env.spec().reward_threshold:
                 print("Solved!")
