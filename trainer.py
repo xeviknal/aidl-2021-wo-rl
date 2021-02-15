@@ -6,7 +6,7 @@ from collections import namedtuple
 
 
 from policy import Policy
-from actions import Actions
+from actions import available_actions
 
 
 class Trainer:
@@ -20,7 +20,7 @@ class Trainer:
         self.input_channels = config['stack_frames']
         self.device = config['device']
         self.writer = SummaryWriter(flush_secs=5)
-        self.policy = Policy(len(Actions.available_actions), 1, self.input_channels).to(self.device)
+        self.policy = Policy(len(available_actions), 1, self.input_channels).to(self.device)
         self.last_epoch = self.policy.load_checkpoint(config['params_path'])
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
 
@@ -42,7 +42,7 @@ class Trainer:
         #self.policy.saved_log_probs.append(m.log_prob(action))
         self.policy.saved_log_probs.append(self.SavedAction(m.log_prob(action), state_value))
         #print(self.policy.saved_log_probs)
-        return Actions()[action.item()]
+        return available_actions[action.item()]
 
     def episode_train(self, iteration):
         g = 0
