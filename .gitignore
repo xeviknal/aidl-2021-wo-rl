@@ -134,3 +134,6 @@ dmypy.json
 
 # IntelliJ - Pycharm
 .idea/
+
+# MacOS bullshit
+.DS_Store
