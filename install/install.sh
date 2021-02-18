@@ -3,6 +3,7 @@
 ## Install for the GCE, not for the local machine
 
 sudo apt-get install wget
+sudo apt-get install build-essential swig gcc libjpeg-dev zlib1g-dev
 sudo apt-get install -y xvfb python-opengl ffmpeg
 sudo apt-get install xserver-xorg-core xorg-x11-server-Xvfb
 sudo apt-get install tigervnc-standalone-server tigervnc-xorg-extension tigervnc-viewer
