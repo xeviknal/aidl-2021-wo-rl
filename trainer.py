@@ -6,7 +6,7 @@ from collections import namedtuple
 
 
 from policy import Policy
-from actions import Actions
+from actions import available_actions
 
 
 class Trainer:
@@ -18,8 +18,9 @@ class Trainer:
         self.gamma = config['gamma']
         self.config = config
         self.input_channels = config['stack_frames']
+        self.device = config['device']
         self.writer = SummaryWriter(flush_secs=5)
-        self.policy = Policy(len(Actions.available_actions), 1, self.input_channels)
+        self.policy = Policy(len(available_actions), 1, self.input_channels).to(self.device)
         self.last_epoch = self.policy.load_checkpoint(config['params_path'])
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
 
@@ -30,8 +31,7 @@ class Trainer:
         else:
             state = np.asarray(state)
 #        state = torch.from_numpy(state).float().unsqueeze(0)
-        state = torch.from_numpy(state).float().unsqueeze(0).view(1, self.input_channels, 96, 96)
-
+        state = torch.from_numpy(state).float().unsqueeze(0).view(1, self.input_channels, 96, 96).to(self.device)
 #        probs = self.policy(state)
         probs, state_value = self.policy(state)
         # We pick the action from a sample of the probabilities
@@ -42,7 +42,7 @@ class Trainer:
         #self.policy.saved_log_probs.append(m.log_prob(action))
         self.policy.saved_log_probs.append(self.SavedAction(m.log_prob(action), state_value))
         #print(self.policy.saved_log_probs)
-        return Actions[action.item()]
+        return available_actions[action.item()]
 
     def episode_train(self, iteration):
         g = 0
@@ -54,7 +54,7 @@ class Trainer:
             g = r + self.gamma * g
             returns.insert(0, g)
 
-        returns = torch.tensor(returns)
+        returns = torch.tensor(returns).to(self.device)
         # Normalize returns (this usually accelerates convergence)
         eps = np.finfo(np.float32).eps.item()
         returns = (returns - returns.mean()) / (returns.std() + eps)
@@ -104,10 +104,11 @@ class Trainer:
             self.episode_train(i_episode)
             ep_rew_history.append((i_episode, ep_reward))
             self.writer.add_scalar('reward', ep_reward, i_episode)
+            self.writer.add_scalar('running reward', running_reward, i_episode)
             if i_episode % self.config['log_interval'] == 0:
                 print('Episode {}\tLast reward: {:.2f}\tAverage reward: {:.2f}'.format(
                     i_episode, ep_reward, running_reward))
-                self.policy.save_checkpoint('./params/policy-params.dl', i_episode)
+                self.policy.save_checkpoint(self.config['params_path'], i_episode)
 
             if running_reward > self.env.spec().reward_threshold:
                 print("Solved!")
