@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from os import path
+from memory import ReplayMemory
 
 
 class Policy(nn.Module):
@@ -19,7 +20,6 @@ class Policy(nn.Module):
             nn.Linear(64 * 22 * 22, 512),
             nn.ReLU(),
             nn.Linear(512, 128),
-#            nn.LogSoftmax(dim=-1)
             nn.ReLU()
         )
 
@@ -29,7 +29,7 @@ class Policy(nn.Module):
         # critic's layer
         self.critic_head = nn.Linear(128, critic_output)
 
-        self.saved_log_probs = []
+        self.saved_current_mdp = []
         self.rewards = []
 
     def forward(self, x):

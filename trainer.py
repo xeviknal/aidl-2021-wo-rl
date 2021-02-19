@@ -7,13 +7,14 @@ from collections import namedtuple
 
 from policy import Policy
 from actions import available_actions
+from memory import ReplayMemory, Transition
 
 
 class Trainer:
 
     def __init__(self, env, config):
         super().__init__()
-        self.SavedAction = namedtuple('SavedAction', ['log_prob', 'value'])
+        self.MarkovDecisionProcess = namedtuple('MarkovDecision', ['state', 'action', 'log_prob', 'vs_t', 'entropy'])
         self.env = env
         self.gamma = config['gamma']
         self.config = config
@@ -23,6 +24,7 @@ class Trainer:
         self.policy = Policy(len(available_actions), 1, self.input_channels).to(self.device)
         self.last_epoch = self.policy.load_checkpoint(config['params_path'])
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
+        self.memory = ReplayMemory(3000)
 
     def select_action(self, state):
         if state is None:  # First state is always None
@@ -30,18 +32,15 @@ class Trainer:
             state = np.zeros((self.input_channels, 96, 96))
         else:
             state = np.asarray(state)
-#        state = torch.from_numpy(state).float().unsqueeze(0)
         state = torch.from_numpy(state).float().unsqueeze(0).view(1, self.input_channels, 96, 96).to(self.device)
-#        probs = self.policy(state)
-        probs, state_value = self.policy(state)
+        probs, vs_t = self.policy(state)
+        # vs_t = return estimated for the current state
+
         # We pick the action from a sample of the probabilities
         # It prevents the model from picking always the same action
         m = torch.distributions.Categorical(probs)
         action = m.sample()
-        #print(m.log_prob(action))
-        #self.policy.saved_log_probs.append(m.log_prob(action))
-        self.policy.saved_log_probs.append(self.SavedAction(m.log_prob(action), state_value))
-        #print(self.policy.saved_log_probs)
+        self.policy.saved_current_mdp.append(self.MarkovDecisionProcess(state, action.item(), m.log_prob(action), vs_t, m.entropy()))
         return available_actions[action.item()]
 
     def episode_train(self, iteration):
@@ -58,25 +57,54 @@ class Trainer:
         # Normalize returns (this usually accelerates convergence)
         eps = np.finfo(np.float32).eps.item()
         returns = (returns - returns.mean()) / (returns.std() + eps)
-#        for log_prob, G in zip(self.policy.saved_log_probs, returns):
-        for (log_prob, baseline) ,G in zip(self.policy.saved_log_probs, returns):
-        #    policy_loss.append(-G * log_prob)
+        for (log_prob, baseline), G in zip(self.policy.saved_log_probs, returns):
             advantage = G - baseline.item()
         # calculate actor (policy) loss 
             policy_loss.append(-log_prob * advantage)
-
         # calculate critic (value) loss using L1 smooth loss
             value_losses.append(F.smooth_l1_loss(baseline, torch.tensor([G])))
 
         # Update policy:
         self.optimizer.zero_grad()
-        #policy_loss = torch.cat(policy_loss).sum()
         policy_loss = torch.stack(policy_loss).sum() + torch.stack(value_losses).sum()
         self.writer.add_scalar('loss', policy_loss.item(), iteration)
         policy_loss.backward()
         self.optimizer.step()
         del self.policy.rewards[:]
         del self.policy.saved_log_probs[:]
+
+    def fill_memory(self):
+        g = 0
+        policy_loss = []
+        value_losses = []
+        returns = []
+
+        for r in self.policy.rewards[::-1]:
+            g = r + self.gamma * g
+            returns.insert(0, g)
+
+        returns = torch.tensor(returns).to(self.device)
+        # Normalize returns (this usually accelerates convergence)
+        eps = np.finfo(np.float32).eps.item()
+        returns = (returns - returns.mean()) / (returns.std() + eps)
+        for (log_prob, baseline), G in zip(self.policy.saved_log_probs, returns):
+            advantage = G - baseline.item()
+
+        self.memory.push()
+
+    def run_episode(self):
+        state, ep_reward = self.env.reset(), 0
+        for t in range(self.env.spec().max_episode_steps):  # Protecting from scenarios where you are mostly stopped
+            action = self.select_action(state)
+            state, reward, done, _ = self.env.step(action)
+            self.policy.rewards.append(reward)
+
+            ep_reward += reward
+            if done:
+                break
+
+        self.fill_episode_memory()
+        return ep_reward
 
     def train(self):
         # Training loop
@@ -87,15 +115,9 @@ class Trainer:
             # The episode counting starts from last checkpoint
             i_episode = i_episode + self.last_epoch
             # Collect experience
-            state, ep_reward = self.env.reset(), 0
-            for t in range(self.env.spec().max_episode_steps):  # Protecting from scenarios where you are mostly stopped
-                action = self.select_action(state)
-                state, reward, done, _ = self.env.step(action)
-                self.policy.rewards.append(reward)
+            for i in range(3):
+                self.run_episode()
 
-                ep_reward += reward
-                if done:
-                    break
 
             # Update running reward
             running_reward = 0.05 * ep_reward + (1 - 0.05) * running_reward
