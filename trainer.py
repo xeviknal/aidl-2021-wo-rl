@@ -66,7 +66,7 @@ class Trainer:
             policy_loss.append(-log_prob * advantage)
 
         # calculate critic (value) loss using L1 smooth loss
-            value_losses.append(F.smooth_l1_loss(baseline, torch.tensor([G])))
+            value_losses.append(F.smooth_l1_loss(baseline, torch.tensor([G]).to(self.device)))
 
         # Update policy:
         self.optimizer.zero_grad()
