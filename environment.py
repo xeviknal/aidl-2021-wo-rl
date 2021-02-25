@@ -1,18 +1,21 @@
 import gym
 from wrappers.frame_skipper import FrameSkipper
-from gym.wrappers import FrameStack, GrayScaleObservation
+from gym.wrappers import FrameStack, GrayScaleObservation, Monitor
 
 
 class CarRacingEnv:
 
-    def __init__(self, device, stack_frames=4):
+    def __init__(self, device, stack_frames=4, train=False):
         super().__init__()
         self.total_rew = 0
         self.state = None
         self.done = False
         self.device = device
+        self.train = train
 
         self.env = gym.make("CarRacing-v0")
+        if not train:
+            self.env = Monitor(self.env, './video', force=True)
         self.env = GrayScaleObservation(self.env)
         self.env = FrameStack(self.env, stack_frames)
         self.env = FrameSkipper(self.env, 4)
@@ -31,6 +34,9 @@ class CarRacingEnv:
         return self.env.spec
 
     def close(self):
-        self.close()
+        self.env.close()
+
+    def render(self):
+        self.env.render()
 
 
