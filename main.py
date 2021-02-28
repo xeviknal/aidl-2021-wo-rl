@@ -2,10 +2,8 @@ import torch
 
 import helpers
 from environment import CarRacingEnv
-from trainer import Trainer
+from trainers.curriculum import CurriculumTrainer
 from runner import Runner
-
-from pyvirtualdisplay import Display
 
 # if gpu is to be used
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -24,8 +22,8 @@ if __name__ == "__main__":
 
     env = CarRacingEnv(device, hyperparams['stack_frames'], hyperparams['train'])
     helpers.display_start()
-    if(hyperparams['train']):
-        trainer = Trainer(env, hyperparams)
+    if hyperparams['train']:
+        trainer = CurriculumTrainer(env, hyperparams)
         trainer.train()
     else:
         runner = Runner(env, hyperparams)
