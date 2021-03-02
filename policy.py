@@ -29,7 +29,7 @@ class Policy(nn.Module):
     def load_checkpoint(self, params_path):
         epoch = 0
         if path.exists(params_path):
-            params_descriptor = torch.load(params_path)
+            params_descriptor = torch.load(params_path, map_location=torch.device('cpu'))
             epoch = 0
             if 'params' in params_descriptor:
                 self.load_state_dict(params_descriptor['params'])

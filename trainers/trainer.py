@@ -8,16 +8,19 @@ from actions import available_actions
 
 class Trainer:
 
-    def __init__(self, env, config):
+    def __init__(self, env, config, episode_length=1000, reward_goal=900, max_epochs=1000):
         super().__init__()
         self.env = env
-        self.gamma = config['gamma']
         self.config = config
+        self.episode_length = episode_length
+        self.reward_goal = reward_goal
+        self.max_epochs = max_epochs
+        self.gamma = config['gamma']
         self.input_channels = config['stack_frames']
         self.device = config['device']
         self.writer = SummaryWriter(flush_secs=5)
         self.policy = Policy(self.input_channels, len(available_actions)).to(self.device)
-        self.last_epoch = self.policy.load_checkpoint(config['params_path'])
+        self.last_epoch = self.policy.load_checkpoint(config['params_path']) | 0
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
 
     def select_action(self, state):

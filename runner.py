@@ -1,8 +1,9 @@
-import torch
 import numpy as np
+import torch
 
-from policy import Policy
 from actions import available_actions
+from policy import Policy
+
 
 class Runner:
     def __init__(self, env, config):
@@ -10,7 +11,6 @@ class Runner:
         self.env = env
         self.config = config
         self.input_channels = config['stack_frames']
-        #self.device = config['device']
         self.policy = Policy(self.input_channels, len(available_actions))
         self.policy.load_checkpoint(config['params_path'])
 

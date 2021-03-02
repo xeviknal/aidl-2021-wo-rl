@@ -1,9 +1,10 @@
-gym
+gym~=0.18.0
 gym[box2d]
 box2d
-pyvirtualdisplay
-IPython
-torch
+pyvirtualdisplay~=2.0
+IPython~=7.19.0
+torch~=1.7.1
 torchvision
 opencv-python
 tensorboard
+numpy~=1.19.4

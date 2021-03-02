@@ -12,6 +12,7 @@ class CarRacingEnv:
         self.done = False
         self.device = device
         self.train = train
+        self.step_reward = 0.1
 
         self.env = gym.make("CarRacing-v0")
         if not train:
