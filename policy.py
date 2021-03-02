@@ -18,7 +18,7 @@ class Policy(nn.Module):
             nn.Linear(64 * 22 * 22, 512),
             nn.ReLU(),
             nn.Linear(512, outputs),
-            nn.LogSoftmax(dim=-1)
+            nn.Softmax(dim=-1)
         )
         self.saved_log_probs = []
         self.rewards = []
