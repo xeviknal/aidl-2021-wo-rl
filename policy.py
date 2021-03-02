@@ -19,7 +19,6 @@ class Policy(nn.Module):
             nn.Linear(64 * 22 * 22, 512),
             nn.ReLU(),
             nn.Linear(512, 128),
-#            nn.LogSoftmax(dim=-1)
             nn.ReLU()
         )
 
@@ -37,7 +36,7 @@ class Policy(nn.Module):
         x= self.pipeline(x)
         # actor: choses action to take from state s_t 
         # by returning probability of each action
-        action_prob = F.softmax(self.actor_head(x), dim=-1)
+        action_prob = F.log_softmax(self.actor_head(x), dim=-1)
 
         # critic: evaluates being in the state s_t
         state_values = self.critic_head(x)
@@ -46,7 +45,6 @@ class Policy(nn.Module):
         # 1. a list with the probability of each action over the action space
         # 2. the value from state s_t 
         return action_prob, state_values
-#        return self.pipeline(x)
 
     def load_checkpoint(self, params_path):
         epoch = 0

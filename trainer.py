@@ -24,7 +24,7 @@ class Trainer:
         self.last_epoch = self.policy.load_checkpoint(config['params_path'])
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
 
-    def select_action(self, state):
+    def select_action(self, state, iteration):
         if state is None:  # First state is always None
             # Adding the starting signal as a 0's tensor
             state = np.zeros((self.input_channels, 96, 96))
@@ -38,10 +38,10 @@ class Trainer:
         # It prevents the model from picking always the same action
         m = torch.distributions.Categorical(probs)
         action = m.sample()
-        #print(m.log_prob(action))
-        #self.policy.saved_log_probs.append(m.log_prob(action))
         self.policy.saved_log_probs.append(self.SavedAction(m.log_prob(action), state_value))
-        #print(self.policy.saved_log_probs)
+        self.writer.add_scalar('action prob', m.log_prob(action), iteration)
+        self.writer.add_scalar('entropy', m.entropy(), iteration)
+        self.writer.add_scalar('action', action.item(), iteration)
         return available_actions[action.item()]
 
     def episode_train(self, iteration):
@@ -88,8 +88,8 @@ class Trainer:
             i_episode = i_episode + self.last_epoch
             # Collect experience
             state, ep_reward = self.env.reset(), 0
-            for t in range(self.env.spec().max_episode_steps):  # Protecting from scenarios where you are mostly stopped
-                action = self.select_action(state)
+            for t in range(self.env.max_episode_steps()):  # Protecting from scenarios where you are mostly stopped
+                action = self.select_action(state, i_episode * self.env.max_episode_steps() + t)
                 state, reward, done, _ = self.env.step(action)
                 self.policy.rewards.append(reward)
 
