@@ -8,17 +8,22 @@ class Policy(nn.Module):
     def __init__(self, inputs=4, outputs=8):
         super(Policy, self).__init__()
         self.pipeline = nn.Sequential(
-            nn.Conv2d(inputs, 32, 3),  # [32, 94, 94]
+            nn.Conv2d(inputs, 6, kernel_size=3, stride=2, padding=1),  # [32, 48, 48]
             nn.ReLU(),
-            nn.MaxPool2d(2),  # [32, 47, 47]
-            nn.Conv2d(32, 64, 4),  # [64, 44, 44]
+            nn.MaxPool2d(2),  # [32, 24, 24]
+            nn.Conv2d(6, 24, kernel_size=3),  # [64, 22, 22]
             nn.ReLU(),
-            nn.MaxPool2d(2),  # [64, 22, 22]
+            nn.MaxPool2d(2),  # [64, 11, 11]
+            nn.Conv2d(24, 32, 4),  # [64, 8, 8]
+            nn.ReLU(),
+            nn.MaxPool2d(2),  # [64, 4, 4]
             nn.Flatten(),
-            nn.Linear(64 * 22 * 22, 512),
+            nn.Linear(32 * 4 * 4, 256),  # [ 512, 256 ]
             nn.ReLU(),
-            nn.Linear(512, outputs),
-            nn.Softmax(dim=-1)
+            nn.Linear(256, 128),
+            nn.ReLU(),
+            nn.Linear(128, outputs),
+            nn.LogSoftmax(dim=-1)
         )
         self.saved_log_probs = []
         self.rewards = []

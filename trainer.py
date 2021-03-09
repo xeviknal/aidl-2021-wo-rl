@@ -28,13 +28,32 @@ class Trainer:
             state = np.asarray(state)
         state = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
         probs = self.policy(state)
+        probs = torch.exp(probs)
+        # probs -> softmax
+        # probs[0] -> prob
+
         # We pick the action from a sample of the probabilities
         # It prevents the model from picking always the same action
         m = torch.distributions.Categorical(probs)
+        # m is a distro of probs
+
         action = m.sample()
+        # action is a sample of a distro of probs (action throttle = e.g. 7)
+        # m.log_prob is the log of the prob of the action `action`.
+
+        # prob[0] = 0.3, prob[1] = 0.3, prob[2] = 0.4
+        # m = [ 0, 0, 0, 1, 1, 1, 2, 2, 2 ]
+        # action = m.sample() => 2
+        # m.log_prob(2) => log(prob[2])
+        print(action.item())
+        print(probs)
+        print(m.log_prob(action))
+        print(torch.exp(m.log_prob(action)))
+        print("------------------------------")
         self.policy.saved_log_probs.append(m.log_prob(action))
         self.writer.add_scalar('action prob', m.log_prob(action), iteration)
         self.writer.add_scalar('entropy', m.entropy(), iteration)
+        self.writer.add_scalar('action', action.item(), iteration)
         return available_actions[action.item()]
 
     def episode_train(self, iteration):
