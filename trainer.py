@@ -28,6 +28,7 @@ class Trainer:
             state = np.asarray(state)
         state = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
         probs = self.policy(state)
+        probs = torch.exp(probs)
         # We pick the action from a sample of the probabilities
         # It prevents the model from picking always the same action
         m = torch.distributions.Categorical(probs)
