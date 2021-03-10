@@ -11,10 +11,12 @@ class Trainer:
     def __init__(self, env, config):
         super().__init__()
         self.env = env
-        self.gamma = config['gamma']
         self.config = config
+        self.gamma = config['gamma']
         self.input_channels = config['stack_frames']
         self.device = config['device']
+        self.eps = config['eps']
+        self.eps_decay_episodes = config['eps_decay_episodes']
         self.writer = SummaryWriter(flush_secs=5)
         self.policy = Policy(self.input_channels, len(available_actions)).to(self.device)
         self.last_epoch = self.policy.load_checkpoint(config['params_path'])
@@ -29,27 +31,15 @@ class Trainer:
         state = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
         probs = self.policy(state)
         probs = torch.exp(probs)
-        # probs -> softmax
-        # probs[0] -> prob
-
-        # We pick the action from a sample of the probabilities
-        # It prevents the model from picking always the same action
         m = torch.distributions.Categorical(probs)
-        # m is a distro of probs
 
-        action = m.sample()
-        # action is a sample of a distro of probs (action throttle = e.g. 7)
-        # m.log_prob is the log of the prob of the action `action`.
+        if np.random.random() < self.eps:
+            action = torch.randint(0, len(available_actions), (1,))
+        else:
+            # We pick the action from a sample of the probabilities
+            # It prevents the model from picking always the same action
+            action = m.sample()
 
-        # prob[0] = 0.3, prob[1] = 0.3, prob[2] = 0.4
-        # m = [ 0, 0, 0, 1, 1, 1, 2, 2, 2 ]
-        # action = m.sample() => 2
-        # m.log_prob(2) => log(prob[2])
-        print(action.item())
-        print(probs)
-        print(m.log_prob(action))
-        print(torch.exp(m.log_prob(action)))
-        print("------------------------------")
         self.policy.saved_log_probs.append(m.log_prob(action))
         self.writer.add_scalar('action prob', m.log_prob(action), iteration)
         self.writer.add_scalar('entropy', m.entropy(), iteration)
@@ -109,6 +99,10 @@ class Trainer:
             ep_rew_history.append((i_episode, ep_reward))
             self.writer.add_scalar('reward', ep_reward, i_episode)
             self.writer.add_scalar('running reward', running_reward, i_episode)
+            if i_episode % self.eps_decay_episodes == 0:
+                self.eps = self.eps - 0.05
+                print('Updating EPS: {}'.format(self.eps))
+
             if i_episode % self.config['log_interval'] == 0:
                 print('Episode {}\tLast reward: {:.2f}\tAverage reward: {:.2f}'.format(
                     i_episode, ep_reward, running_reward))
