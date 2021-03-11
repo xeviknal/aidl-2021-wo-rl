@@ -30,9 +30,7 @@ class Trainer:
             state = np.zeros((self.input_channels, 96, 96))
         else:
             state = np.asarray(state)
-#        state = torch.from_numpy(state).float().unsqueeze(0)
         state = torch.from_numpy(state).float().unsqueeze(0).view(1, self.input_channels, 96, 96).to(self.device)
-#        probs = self.policy(state)
         probs, state_value = self.policy(state)
         # We pick the action from a sample of the probabilities
         # It prevents the model from picking always the same action
@@ -58,19 +56,17 @@ class Trainer:
         # Normalize returns (this usually accelerates convergence)
         eps = np.finfo(np.float32).eps.item()
         returns = (returns - returns.mean()) / (returns.std() + eps)
-#        for log_prob, G in zip(self.policy.saved_log_probs, returns):
         for (log_prob, baseline) ,G in zip(self.policy.saved_log_probs, returns):
-        #    policy_loss.append(-G * log_prob)
             advantage = G - baseline.item()
-        # calculate actor (policy) loss 
+
+            # calculate actor (policy) loss
             policy_loss.append(-log_prob * advantage)
 
-        # calculate critic (value) loss using L1 smooth loss
+            # calculate critic (value) loss using L1 smooth loss
             value_losses.append(F.smooth_l1_loss(baseline, torch.tensor([G]).to(self.device)))
 
         # Update policy:
         self.optimizer.zero_grad()
-        #policy_loss = torch.cat(policy_loss).sum()
         policy_loss = torch.stack(policy_loss).sum() + torch.stack(value_losses).sum()
         self.writer.add_scalar('loss', policy_loss.item(), iteration)
         policy_loss.backward()
