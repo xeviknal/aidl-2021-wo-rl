@@ -20,7 +20,7 @@ if __name__ == "__main__":
         'device': device,
         'params_path': './params/policy-params.dl',
         'eps': 0.4,
-        'eps_decay_episodes': 300,
+        'eps_decay_episodes': 250,
         'train': True
     }
 
