@@ -19,6 +19,8 @@ if __name__ == "__main__":
         'stack_frames': 4,
         'device': device,
         'params_path': './params/policy-params.dl',
+        'eps': 0.4,
+        'eps_decay_episodes': 250,
         'train': True
     }
 
