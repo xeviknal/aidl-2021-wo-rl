@@ -9,17 +9,20 @@ class Policy(nn.Module):
     def __init__(self, actor_output, critic_output, inputs=4):
         super(Policy, self).__init__()
         self.pipeline = nn.Sequential(
-            nn.Conv2d(inputs, 32, 3),  # [32, 94, 94]
+            nn.Conv2d(inputs, 12, kernel_size=3, stride=2, padding=1),  # [12, 48, 48]
             nn.ReLU(),
-            nn.MaxPool2d(2),  # [32, 47, 47]
-            nn.Conv2d(32, 64, 4),  # [64, 44, 44]
+            nn.MaxPool2d(2),  # [12, 24, 24]
+            nn.Conv2d(12, 24, kernel_size=3),  # [24, 22, 22]
             nn.ReLU(),
-            nn.MaxPool2d(2),  # [64, 22, 22]
+            nn.MaxPool2d(2),  # [24, 11, 11]
+            nn.Conv2d(24, 32, 4),  # [32, 8, 8]
+            nn.ReLU(),
+            nn.MaxPool2d(2),  # [32, 4, 4]
             nn.Flatten(),
-            nn.Linear(64 * 22 * 22, 512),
+            nn.Linear(32 * 4 * 4, 256),  # [ 512, 256 ]
             nn.ReLU(),
-            nn.Linear(512, 128),
-            nn.ReLU()
+            nn.Linear(256, 128),
+            nn.ReLU(),
         )
 
         # actor's layer
