@@ -3,6 +3,7 @@ import torch
 import glob
 import io
 import base64
+import os
 from IPython.display import HTML
 from IPython import display as ipythondisplay
 
@@ -28,3 +29,14 @@ def display_start():
 
 def save_model(model, path):
     torch.save(model.state_dict(), path)
+
+def create_directory(path):
+    try:
+        os.mkdir(path)
+        print(f'Directory {path} has been created.')
+    except FileExistsError:
+        print(f'Directory {path} already exists.')
+
+def create_directories(params_path='params', runs_path='runs'):
+    create_directory(params_path)
+    create_directory(runs_path)
