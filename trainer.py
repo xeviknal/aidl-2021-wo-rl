@@ -67,6 +67,10 @@ class Trainer:
         running_reward = 10
         ep_rew_history = []
         for i_episode in range(self.config['num_episodes'] - self.last_epoch):
+            # Because of 0-indexing, we were not recording the final batch of episodes in the params.
+            # By incrementing the episode by 1, we use 1-indexing instead and everything makes sense
+            # without changing too much code
+            i_episode+=1
             # The episode counting starts from last checkpoint
             i_episode = i_episode + self.last_epoch
             # Collect experience

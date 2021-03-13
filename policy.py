@@ -32,9 +32,13 @@ class Policy(nn.Module):
             params_descriptor = torch.load(params_path)
             epoch = 0
             if 'params' in params_descriptor:
+                #print('debug - params was found in params-descriptor')
+                #print(f"params_descriptor['params'] = {params_descriptor['params']}")
                 self.load_state_dict(params_descriptor['params'])
                 epoch = params_descriptor['epoch']
+                #print(f"epoch = {epoch}")
             else:
+                #print('debug - params was NOT found in params-descriptor')
                 self.load_state_dict(params_descriptor)
 
             print("Model params are loaded now")
@@ -44,6 +48,7 @@ class Policy(nn.Module):
         return epoch
 
     def save_checkpoint(self, params_path, epoch):
+        #print(f'Saving checkpoint in epoch {epoch}')
         torch.save({
             'epoch': epoch,
             'params': self.state_dict(),
