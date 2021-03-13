@@ -36,7 +36,3 @@ def create_directory(path):
         print(f'Directory {path} has been created.')
     except FileExistsError:
         print(f'Directory {path} already exists.')
-
-def create_directories(params_path='params', runs_path='runs'):
-    create_directory(params_path)
-    create_directory(runs_path)

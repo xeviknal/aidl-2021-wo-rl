@@ -22,6 +22,9 @@ if __name__ == "__main__":
         'train': True
     }
 
+    #make sure that params folder exists
+    helpers.create_directory('params')
+
     env = CarRacingEnv(device, hyperparams['stack_frames'], hyperparams['train'])
     helpers.display_start()
     if(hyperparams['train']):
