@@ -79,6 +79,8 @@ class Trainer:
         running_reward = 10
         ep_rew_history = []
         for i_episode in range(self.config['num_episodes'] - self.last_epoch):
+            # Convert to 1-indexing to reduce complexity
+            i_episode+=1
             # The episode counting starts from last checkpoint
             i_episode = i_episode + self.last_epoch
             # Collect experience
@@ -103,7 +105,11 @@ class Trainer:
 
             # Perform training step
             self.episode_train(i_episode)
-            if i_episode % self.config['log_interval'] == 0:
+
+            # Saving params
+            # Saving each log interval, at the end of the episodes or when training is complete
+            #TODO: catch keyboard interrupt
+            if i_episode % self.config['log_interval'] == 0 or i_episode == self.config['num_episodes'] or running_reward > self.env.spec().reward_threshold:
                 print('Episode {}\tLast reward: {:.2f}\tAverage reward: {:.2f}'.format(
                     i_episode, ep_reward, running_reward))
                 self.policy.save_checkpoint(self.config['params_path'], i_episode)
