@@ -33,6 +33,7 @@ class Policy(nn.Module):
 
         self.saved_log_probs = []
         self.rewards = []
+        self.entropies = []
 
     def forward(self, x):
        
