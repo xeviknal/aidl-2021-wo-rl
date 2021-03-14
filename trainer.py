@@ -26,30 +26,15 @@ class Trainer:
             state = np.zeros((self.input_channels, 96, 96))
         else:
             state = np.asarray(state)
-        state = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
+        state = torch.from_numpy(state).float().unsqueeze(0).view(1, self.input_channels, 96, 96)
+        state.to(self.device)
         probs = self.policy(state)
-        probs = torch.exp(probs)
-        # probs -> softmax
-        # probs[0] -> prob
 
         # We pick the action from a sample of the probabilities
         # It prevents the model from picking always the same action
         m = torch.distributions.Categorical(probs)
-        # m is a distro of probs
 
         action = m.sample()
-        # action is a sample of a distro of probs (action throttle = e.g. 7)
-        # m.log_prob is the log of the prob of the action `action`.
-
-        # prob[0] = 0.3, prob[1] = 0.3, prob[2] = 0.4
-        # m = [ 0, 0, 0, 1, 1, 1, 2, 2, 2 ]
-        # action = m.sample() => 2
-        # m.log_prob(2) => log(prob[2])
-        print(action.item())
-        print(probs)
-        print(m.log_prob(action))
-        print(torch.exp(m.log_prob(action)))
-        print("------------------------------")
         self.policy.saved_log_probs.append(m.log_prob(action))
         self.writer.add_scalar('action prob', m.log_prob(action), iteration)
         self.writer.add_scalar('entropy', m.entropy(), iteration)
@@ -71,11 +56,14 @@ class Trainer:
         returns = (returns - returns.mean()) / (returns.std() + eps)
 
         for log_prob, G in zip(self.policy.saved_log_probs, returns):
+            log_prob.to(self.device)
+            G.to(self.device)
             policy_loss.append(-G * log_prob)
 
         # Update policy:
         self.optimizer.zero_grad()
         policy_loss = torch.cat(policy_loss).sum()
+        policy_loss.to(self.device)
         self.writer.add_scalar('loss', policy_loss.item(), iteration)
         policy_loss.backward()
         self.optimizer.step()
