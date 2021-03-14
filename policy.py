@@ -39,7 +39,7 @@ class Policy(nn.Module):
         x= self.pipeline(x)
         # actor: choses action to take from state s_t 
         # by returning probability of each action
-        action_prob = F.log_softmax(self.actor_head(x), dim=-1)
+        action_prob = F.softmax(self.actor_head(x), dim=-1)
 
         # critic: evaluates being in the state s_t
         state_values = self.critic_head(x)
