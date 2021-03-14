@@ -34,12 +34,17 @@ class Policy(nn.Module):
 
     def load_checkpoint(self, params_path):
         epoch = 0
+        running_reward = 10
+        optim_params = None
         if path.exists(params_path):
             params_descriptor = torch.load(params_path)
             epoch = 0
+            running_reward = 0
             if 'params' in params_descriptor:
                 self.load_state_dict(params_descriptor['params'])
+                optim_params = params_descriptor['optimizer_params']
                 epoch = params_descriptor['epoch']
+                running_reward = params_descriptor['running_reward']
             else:
                 self.load_state_dict(params_descriptor)
 
@@ -47,7 +52,7 @@ class Policy(nn.Module):
         else:
             print("Params not found: training from scratch")
 
-        return epoch
+        return epoch, optim_params, running_reward
 
     def save_checkpoint(self, params_path, epoch):
         torch.save({
