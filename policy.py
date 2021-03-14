@@ -19,7 +19,6 @@ class Policy(nn.Module):
             nn.Linear(64 * 22 * 22, 512),
             nn.ReLU(),
             nn.Linear(512, 128),
-#            nn.LogSoftmax(dim=-1)
             nn.ReLU()
         )
 
@@ -31,6 +30,7 @@ class Policy(nn.Module):
 
         self.saved_log_probs = []
         self.rewards = []
+        self.entropies = []
 
     def forward(self, x):
        
