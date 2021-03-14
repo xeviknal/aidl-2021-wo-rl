@@ -67,9 +67,11 @@ class Policy(nn.Module):
 
         return epoch
 
-    def save_checkpoint(self, params_path, epoch):
+    def save_checkpoint(self, params_path, epoch, running_reward, optimizer):
         torch.save({
             'epoch': epoch,
             'params': self.state_dict(),
+            'running_reward': running_reward,
+            'optimizer_params': optimizer.state_dict(),
         }, params_path)
         print("Relax, params are saved now")
