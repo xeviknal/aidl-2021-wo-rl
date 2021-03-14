@@ -21,8 +21,10 @@ class Trainer:
         self.device = config['device']
         self.writer = SummaryWriter(flush_secs=5)
         self.policy = Policy(len(available_actions), 1, self.input_channels).to(self.device)
-        self.last_epoch = self.policy.load_checkpoint(config['params_path'])
+        self.last_epoch, optim_params, self.running_reward = self.policy.load_checkpoint(config['params_path'])
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
+        if optim_params is not None:
+            self.optimizer.load_state_dict(optim_params)
 
     def select_action(self, state):
         if state is None:  # First state is always None
@@ -76,7 +78,6 @@ class Trainer:
     def train(self):
         # Training loop
         print("Target reward: {}".format(self.env.spec().reward_threshold))
-        running_reward = 10
         ep_rew_history = []
         for i_episode in range(self.config['num_episodes'] - self.last_epoch):
             # Convert to 1-indexing to reduce complexity
@@ -95,12 +96,12 @@ class Trainer:
                     break
 
             # Update running reward
-            running_reward = 0.05 * ep_reward + (1 - 0.05) * running_reward
+            self.running_reward = 0.05 * ep_reward + (1 - 0.05) * self.running_reward
 
             # Plotting
             ep_rew_history.append((i_episode, ep_reward))
             self.writer.add_scalar('reward', ep_reward, i_episode)
-            self.writer.add_scalar('running reward', running_reward, i_episode)
+            self.writer.add_scalar('running reward', self.running_reward, i_episode)
             self.writer.add_scalar('mean action prob', torch.mean(torch.exp(torch.Tensor(self.policy.saved_log_probs)[:, :1])), i_episode)
             self.writer.add_scalar('mean entropy', np.mean(self.policy.entropies), i_episode)
 
@@ -112,11 +113,11 @@ class Trainer:
             #TODO: catch keyboard interrupt
             if i_episode % self.config['log_interval'] == 0 or i_episode == self.config['num_episodes'] or running_reward > self.env.spec().reward_threshold:
                 print('Episode {}\tLast reward: {:.2f}\tAverage reward: {:.2f}'.format(
-                    i_episode, ep_reward, running_reward))
-                self.policy.save_checkpoint(self.config['params_path'], i_episode, running_reward, self.optimizer)
+                    i_episode, ep_reward, self.running_reward))
+                self.policy.save_checkpoint(self.config['params_path'], i_episode, self.running_reward, self.optimizer)
 
-            if running_reward > self.env.spec().reward_threshold:
+            if self.running_reward > self.env.spec().reward_threshold:
                 print("Solved!")
                 break
 
-        print("Finished training! Running reward is now {:.2f}".format(running_reward))
+        print("Finished training! Running reward is now {:.2f}".format(self.running_reward))
