@@ -30,18 +30,14 @@ class Trainer:
             state = np.zeros((self.input_channels, 96, 96))
         else:
             state = np.asarray(state)
-#        state = torch.from_numpy(state).float().unsqueeze(0)
         state = torch.from_numpy(state).float().unsqueeze(0).view(1, self.input_channels, 96, 96).to(self.device)
-#        probs = self.policy(state)
         probs, state_value = self.policy(state)
         # We pick the action from a sample of the probabilities
         # It prevents the model from picking always the same action
         m = torch.distributions.Categorical(probs)
         action = m.sample()
-        #print(m.log_prob(action))
-        #self.policy.saved_log_probs.append(m.log_prob(action))
         self.policy.saved_log_probs.append(self.SavedAction(m.log_prob(action), state_value))
-        #print(self.policy.saved_log_probs)
+        self.policy.entropies.append(m.entropy().item())
         return available_actions[action.item()]
 
     def episode_train(self, iteration):
@@ -58,23 +54,21 @@ class Trainer:
         # Normalize returns (this usually accelerates convergence)
         eps = np.finfo(np.float32).eps.item()
         returns = (returns - returns.mean()) / (returns.std() + eps)
-#        for log_prob, G in zip(self.policy.saved_log_probs, returns):
         for (log_prob, baseline) ,G in zip(self.policy.saved_log_probs, returns):
-        #    policy_loss.append(-G * log_prob)
             advantage = G - baseline.item()
-        # calculate actor (policy) loss 
+            # calculate actor (policy) loss
             policy_loss.append(-log_prob * advantage)
 
-        # calculate critic (value) loss using L1 smooth loss
-            value_losses.append(F.smooth_l1_loss(baseline, torch.tensor([G]).to(self.device)))
+            # calculate critic (value) loss using L1 smooth loss
+            value_losses.append(F.smooth_l1_loss(baseline.squeeze(), G))
 
         # Update policy:
         self.optimizer.zero_grad()
-        #policy_loss = torch.cat(policy_loss).sum()
         policy_loss = torch.stack(policy_loss).sum() + torch.stack(value_losses).sum()
         self.writer.add_scalar('loss', policy_loss.item(), iteration)
         policy_loss.backward()
         self.optimizer.step()
+        del self.policy.entropies[:]
         del self.policy.rewards[:]
         del self.policy.saved_log_probs[:]
 
@@ -100,11 +94,14 @@ class Trainer:
             # Update running reward
             running_reward = 0.05 * ep_reward + (1 - 0.05) * running_reward
 
-            # Perform training step
-            self.episode_train(i_episode)
+            # Plotting
             ep_rew_history.append((i_episode, ep_reward))
             self.writer.add_scalar('reward', ep_reward, i_episode)
             self.writer.add_scalar('running reward', running_reward, i_episode)
+            self.writer.add_scalar('mean entropy', np.mean(self.policy.entropies), i_episode)
+
+            # Perform training step
+            self.episode_train(i_episode)
             if i_episode % self.config['log_interval'] == 0:
                 print('Episode {}\tLast reward: {:.2f}\tAverage reward: {:.2f}'.format(
                     i_episode, ep_reward, running_reward))
