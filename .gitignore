@@ -137,3 +137,6 @@ dmypy.json
 
 # MacOS bullshit
 .DS_Store
+
+# nohup log files
+nohup.out
