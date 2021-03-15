@@ -111,7 +111,7 @@ class Trainer:
             # Saving params
             # Saving each log interval, at the end of the episodes or when training is complete
             #TODO: catch keyboard interrupt
-            if i_episode % self.config['log_interval'] == 0 or i_episode == self.config['num_episodes'] or running_reward > self.env.spec().reward_threshold:
+            if i_episode % self.config['log_interval'] == 0 or i_episode == self.config['num_episodes'] or self.running_reward > self.env.spec().reward_threshold:
                 print('Episode {}\tLast reward: {:.2f}\tAverage reward: {:.2f}'.format(
                     i_episode, ep_reward, self.running_reward))
                 self.policy.save_checkpoint(self.config['params_path'], i_episode, self.running_reward, self.optimizer)
