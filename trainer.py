@@ -57,6 +57,11 @@ class Trainer:
         eps = np.finfo(np.float32).eps.item()
         returns = (returns - returns.mean()) / (returns.std() + eps)
         for (log_prob, baseline) ,G in zip(self.policy.saved_log_probs, returns):
+            # HEY, THIS IS NEW!
+            # Juanjo sends both log_prob and baseline to the GPU but we didn't before?
+            baseline = baseline.to(self.device)
+            log_prob = log_prob.to(self.device)
+
             advantage = G - baseline.item()
 
             # calculate actor (policy) loss
@@ -78,7 +83,7 @@ class Trainer:
     def train(self):
         # Training loop
         print("Target reward: {}".format(self.env.spec().reward_threshold))
-        ep_rew_history = []
+        ep_rew_history = [] # this var seems dead, what does it do?
         for i_episode in range(self.config['num_episodes'] - self.last_epoch):
             # Convert to 1-indexing to reduce complexity
             i_episode+=1
@@ -99,7 +104,7 @@ class Trainer:
             self.running_reward = 0.05 * ep_reward + (1 - 0.05) * self.running_reward
 
             # Plotting
-            ep_rew_history.append((i_episode, ep_reward))
+            ep_rew_history.append((i_episode, ep_reward)) # Is this doing anything?
             self.writer.add_scalar('reward', ep_reward, i_episode)
             self.writer.add_scalar('running reward', self.running_reward, i_episode)
             self.writer.add_scalar('mean action prob', torch.mean(torch.exp(torch.Tensor(self.policy.saved_log_probs)[:, :1])), i_episode)
