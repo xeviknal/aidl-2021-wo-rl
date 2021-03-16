@@ -10,9 +10,12 @@ class Runner:
         self.env = env
         self.config = config
         self.input_channels = config['stack_frames']
-        #self.device = config['device']
-        self.policy = Policy(self.input_channels, len(available_actions))
-        self.policy.load_checkpoint(config['params_path'])
+        self.device = config['device']
+        self.policy = Policy(len(available_actions), 1, self.input_channels).to(self.device)
+        self.last_epoch, optim_params, self.running_reward = self.policy.load_checkpoint(config['params_path'])
+        self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
+        if optim_params is not None:
+            self.optimizer.load_state_dict(optim_params)
 
     def select_action(self, state):
         if state is None:  # First state is always None
@@ -20,8 +23,8 @@ class Runner:
             state = np.zeros((self.input_channels, 96, 96))
         else:
             state = np.asarray(state)
-        state = torch.from_numpy(state).float().unsqueeze(0)
-        probs = self.policy(state)
+        state = torch.from_numpy(state).float().unsqueeze(0).view(1, self.input_channels, 96, 96).to(self.device)
+        probs, state_value = self.policy(state)
         # We pick the action from a sample of the probabilities
         # It prevents the model from picking always the same action
         m = torch.distributions.Categorical(probs)
