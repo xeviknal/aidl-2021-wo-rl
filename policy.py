@@ -2,20 +2,25 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from os import path
+from interpretability.interpreter import Interpreter
 
 
 class Policy(nn.Module):
 
-    def __init__(self, actor_output, critic_output, inputs=4):
+    def __init__(self, actor_output, critic_output, inputs=4, writer=None):
         super(Policy, self).__init__()
         self.pipeline = nn.Sequential(
+            Interpreter(writer, 'before_conv', [4, 96, 96]),
             nn.Conv2d(inputs, 12, kernel_size=3, stride=2, padding=1),  # [12, 48, 48]
+            Interpreter(writer, '1st_conv', [12, 48, 48]),
             nn.ReLU(),
             nn.MaxPool2d(2),  # [12, 24, 24]
             nn.Conv2d(12, 24, kernel_size=3),  # [24, 22, 22]
+            Interpreter(writer, '2nd_conv', [24, 22, 22]),
             nn.ReLU(),
             nn.MaxPool2d(2),  # [24, 11, 11]
             nn.Conv2d(24, 32, 4),  # [32, 8, 8]
+            Interpreter(writer, '3rd_conv', [32, 8, 8]),
             nn.ReLU(),
             nn.MaxPool2d(2),  # [32, 4, 4]
             nn.Flatten(),

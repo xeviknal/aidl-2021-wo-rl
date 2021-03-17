@@ -20,7 +20,7 @@ class Trainer:
         self.input_channels = config['stack_frames']
         self.device = config['device']
         self.writer = SummaryWriter(flush_secs=5)
-        self.policy = Policy(len(available_actions), 1, self.input_channels).to(self.device)
+        self.policy = Policy(len(available_actions), 1, self.input_channels, self.writer).to(self.device)
         self.last_epoch, optim_params, self.running_reward = self.policy.load_checkpoint(config['params_path'])
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
         if optim_params is not None:

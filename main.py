@@ -27,7 +27,7 @@ if __name__ == "__main__":
 
     env = CarRacingEnv(device, hyperparams['stack_frames'], hyperparams['train'])
     helpers.display_start()
-    if(hyperparams['train']):
+    if hyperparams['train']:
         trainer = Trainer(env, hyperparams)
         trainer.train()
     else:
