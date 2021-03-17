@@ -18,6 +18,7 @@ class CarRacingEnv:
         if not train:
             self.env = Monitor(self.env, './video', force=True)
         self.env = GrayScaleObservation(self.env)
+        self.env = EqualizeObservation(self.env)
         self.env = FrameStack(self.env, stack_frames)
         self.env = FrameSkipper(self.env, 4)
         print(self.env.observation_space)
