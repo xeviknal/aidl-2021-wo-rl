@@ -1,5 +1,6 @@
 import gym
 from wrappers.frame_skipper import FrameSkipper
+from wrappers.equalize_observation import EqualizeObservation
 from gym.wrappers import FrameStack, GrayScaleObservation, Monitor
 
 
