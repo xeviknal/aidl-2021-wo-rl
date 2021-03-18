@@ -38,7 +38,7 @@ class Trainer:
 
         action = m.sample()
         self.policy.saved_log_probs.append(m.log_prob(action))
-        self.policy.entropies.append(m.entropy())
+        self.policy.entropies.append(m.entropy().item())
         return available_actions[action.item()]
 
     def episode_train(self, iteration):
@@ -97,7 +97,6 @@ class Trainer:
             ep_rew_history.append((i_episode, ep_reward))
             self.writer.add_scalar('reward', ep_reward, i_episode)
             self.writer.add_scalar('running reward', self.running_reward, i_episode)
-            self.writer.add_scalar('mean action prob', torch.mean(torch.exp(torch.Tensor(self.policy.saved_log_probs)[:, :1])), i_episode)
             self.writer.add_scalar('mean entropy', np.mean(self.policy.entropies), i_episode)
 
             # Perform training step
