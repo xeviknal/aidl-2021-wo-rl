@@ -20,7 +20,7 @@ class Trainer:
         self.last_epoch = self.policy.load_checkpoint(config['params_path'])
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
 
-    def select_action(self, state, iteration):
+    def select_action(self, state):
         if state is None:  # First state is always None
             # Adding the starting signal as a 0's tensor
             state = np.zeros((self.input_channels, 96, 96))
@@ -36,9 +36,7 @@ class Trainer:
 
         action = m.sample()
         self.policy.saved_log_probs.append(m.log_prob(action))
-        self.writer.add_scalar('action prob', m.log_prob(action), iteration)
-        self.writer.add_scalar('entropy', m.entropy(), iteration)
-        self.writer.add_scalar('action', action.item(), iteration)
+        self.policy.entropies.append(m.entropy())
         return available_actions[action.item()]
 
     def episode_train(self, iteration):
@@ -67,6 +65,7 @@ class Trainer:
         self.writer.add_scalar('loss', policy_loss.item(), iteration)
         policy_loss.backward()
         self.optimizer.step()
+        del self.policy.entropies[:]
         del self.policy.rewards[:]
         del self.policy.saved_log_probs[:]
 
@@ -81,7 +80,7 @@ class Trainer:
             # Collect experience
             state, ep_reward = self.env.reset(), 0
             for t in range(self.env.max_episode_steps()):  # Protecting from scenarios where you are mostly stopped
-                action = self.select_action(state, i_episode * self.env.max_episode_steps() + t)
+                action = self.select_action(state)
                 state, reward, done, _ = self.env.step(action)
                 self.policy.rewards.append(reward)
 
@@ -92,11 +91,13 @@ class Trainer:
             # Update running reward
             running_reward = 0.05 * ep_reward + (1 - 0.05) * running_reward
 
-            # Perform training step
-            self.episode_train(i_episode)
             ep_rew_history.append((i_episode, ep_reward))
             self.writer.add_scalar('reward', ep_reward, i_episode)
             self.writer.add_scalar('running reward', running_reward, i_episode)
+            self.writer.add_scalar('mean entropy', np.mean(self.policy.entropies), i_episode)
+
+            # Perform training step
+            self.episode_train(i_episode)
             if i_episode % self.config['log_interval'] == 0:
                 print('Episode {}\tLast reward: {:.2f}\tAverage reward: {:.2f}'.format(
                     i_episode, ep_reward, running_reward))
