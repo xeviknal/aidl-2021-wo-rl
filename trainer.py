@@ -83,7 +83,6 @@ class Trainer:
     def train(self):
         # Training loop
         print("Target reward: {}".format(self.env.spec().reward_threshold))
-        ep_rew_history = [] # this var seems dead, what does it do?
         for i_episode in range(self.config['num_episodes'] - self.last_epoch):
             # Convert to 1-indexing to reduce complexity
             i_episode+=1
@@ -104,7 +103,6 @@ class Trainer:
             self.running_reward = 0.05 * ep_reward + (1 - 0.05) * self.running_reward
 
             # Plotting
-            ep_rew_history.append((i_episode, ep_reward)) # Is this doing anything?
             self.writer.add_scalar('reward', ep_reward, i_episode)
             self.writer.add_scalar('running reward', self.running_reward, i_episode)
             self.writer.add_scalar('mean action prob', torch.mean(torch.exp(torch.Tensor(self.policy.saved_log_probs)[:, :1])), i_episode)
