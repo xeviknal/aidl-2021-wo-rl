@@ -20,7 +20,7 @@ if __name__ == "__main__":
         'device': device,
         'params_path': './params/policy-params.dl',
         'action_set_num': 0,
-        'train': True
+        'train': False
     }
 
     #make sure that params folder exists
