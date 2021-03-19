@@ -19,8 +19,8 @@ if __name__ == "__main__":
         'stack_frames': 4,
         'device': device,
         'params_path': './params/policy-params.dl',
-        'action_set_num': 0,
-        'train': False
+        'action_set_num': 1,
+        'train': True
     }
 
     #make sure that params folder exists
