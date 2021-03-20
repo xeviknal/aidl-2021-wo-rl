@@ -19,7 +19,7 @@ if __name__ == "__main__":
         'stack_frames': 4,
         'device': device,
         'params_path': './params/policy-params.dl',
-        'action_set_num': 2,
+        'action_set_num': 3,
         'train': True
     }
 
