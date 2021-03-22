@@ -3,7 +3,7 @@ import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 
 from policy import Policy
-from actions import available_actions
+from actions import get_action
 
 
 class Trainer:
@@ -16,7 +16,8 @@ class Trainer:
         self.input_channels = config['stack_frames']
         self.device = config['device']
         self.writer = SummaryWriter(flush_secs=5)
-        self.policy = Policy(self.input_channels, len(available_actions)).to(self.device)
+        self.action_set = get_action(config['action_set_num'])
+        self.policy = Policy(self.input_channels, len(self.action_set)).to(self.device)
         self.last_epoch, optim_params, self.running_reward = self.policy.load_checkpoint(config['params_path'])
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
         if optim_params is not None:
@@ -39,7 +40,7 @@ class Trainer:
         action = m.sample()
         self.policy.saved_log_probs.append(m.log_prob(action))
         self.policy.entropies.append(m.entropy().item())
-        return available_actions[action.item()]
+        return self.action_set[action.item()]
 
     def episode_train(self, iteration):
         g = 0
