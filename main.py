@@ -19,10 +19,11 @@ if __name__ == "__main__":
         'stack_frames': 4,
         'device': device,
         'params_path': './params/policy-params.dl',
+        'action_set_num': 2,
         'train': True
     }
 
-    #make sure that params folder exists
+    # make sure that params folder exists
     helpers.create_directory('params')
 
     env = CarRacingEnv(device, hyperparams['stack_frames'], hyperparams['train'])

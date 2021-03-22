@@ -6,7 +6,7 @@ from collections import namedtuple
 
 
 from policy import Policy
-from actions import available_actions
+from actions import get_action
 
 
 class Trainer:
@@ -20,7 +20,8 @@ class Trainer:
         self.input_channels = config['stack_frames']
         self.device = config['device']
         self.writer = SummaryWriter(flush_secs=5)
-        self.policy = Policy(len(available_actions), 1, self.input_channels).to(self.device)
+        self.action_set = get_action(config['action_set_num'])
+        self.policy = Policy(len(self.action_set), 1, self.input_channels).to(self.device)
         self.last_epoch, optim_params, self.running_reward = self.policy.load_checkpoint(config['params_path'])
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
         if optim_params is not None:
@@ -40,7 +41,7 @@ class Trainer:
         action = m.sample()
         self.policy.saved_log_probs.append(self.SavedAction(m.log_prob(action), state_value))
         self.policy.entropies.append(m.entropy().item())
-        return available_actions[action.item()]
+        return self.action_set[action.item()]
 
     def episode_train(self, iteration):
         g = 0
@@ -110,7 +111,7 @@ class Trainer:
 
             # Saving params
             # Saving each log interval, at the end of the episodes or when training is complete
-            #TODO: catch keyboard interrupt
+            #TODO: catch keybard interrupt
             if i_episode % self.config['log_interval'] == 0 or i_episode == self.config['num_episodes'] or self.running_reward > self.env.spec().reward_threshold:
                 print('Episode {}\tLast reward: {:.2f}\tAverage reward: {:.2f}'.format(
                     i_episode, ep_reward, self.running_reward))
