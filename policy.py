@@ -34,7 +34,6 @@ class Policy(nn.Module):
 
         self.saved_current_mdp = []
         self.rewards = []
-        self.entropies = []
 
     def forward(self, x):
        
