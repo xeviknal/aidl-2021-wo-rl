@@ -60,7 +60,12 @@ class Trainer:
 
         return ep_reward
 
-    def policy_update(self, iteration):
+    def policy_update(self, iteration, sample_ids):
+
+        # Take one batch:
+        transitions = self.memory.from_indexes(sample_ids)
+        
+
         g = 0
         policy_loss = []
         value_losses = []
@@ -83,14 +88,20 @@ class Trainer:
             # calculate critic (value) loss using L1 smooth loss
             value_losses.append(F.smooth_l1_loss(baseline.squeeze(), G))
 
+        l_t_clip = 0
+        l_t_vf = 0
+        s_t_entropy = 0
         # Update policy:
         self.optimizer.zero_grad()
         policy_loss = torch.stack(policy_loss).sum() + torch.stack(value_losses).sum()
         self.writer.add_scalar('loss', policy_loss.item(), iteration)
         policy_loss.backward()
         self.optimizer.step()
-        del self.policy.rewards[:]
+
+    def clean_training_batch(self):
+        self.memory.clear()  # Clearing memory
         del self.policy.saved_log_probs[:]
+        del self.policy.rewards[:]
 
     def logging_episode(self, i_episode, ep_reward):
         self.writer.add_scalar('reward', ep_reward, i_episode)
@@ -115,9 +126,13 @@ class Trainer:
                 self.running_reward = 0.05 * ep_reward + (1 - 0.05) * self.running_reward
                 self.logging_episode(i_episode, ep_reward)
 
-            for k in range(self.epochs):
-                for b in range(self.batch):
-                    self.episode_train(i_episode)
+            # Take epochs * batch random index
+            indexes = torch.randperm(self.epochs * self.batch)
+            for k in range(0, self.epochs, self.batch):
+                end = k + self.batch
+                self.policy_update(k, indexes[k:end])
+
+            self.clean_training_batch()
 
             # Saving each log interval, at the end of the episodes or when training is complete
             # TODO: catch keyboard interrupt
