@@ -59,6 +59,9 @@ class Trainer:
         eps = np.finfo(np.float32).eps.item()
         returns = (returns - returns.mean()) / (returns.std() + eps)
         for (log_prob, baseline) ,G in zip(self.policy.saved_log_probs, returns):
+            baseline = baseline.to(self.device)
+            log_prob = log_prob.to(self.device)
+            
             advantage = G - baseline.item()
 
             # calculate actor (policy) loss
