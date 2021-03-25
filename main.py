@@ -19,7 +19,7 @@ if __name__ == "__main__":
         'stack_frames': 4,
         'device': device,
         'num_epochs': 10,
-        'batch_size': 128,
+        'mini_batch_size': 128,
         'params_path': './params/policy-params.dl',
         'train': True
     }

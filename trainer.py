@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
-import torch.nn.functional as F
+import torch.nn as nn
 from collections import namedtuple
 
 
@@ -14,14 +14,14 @@ class Trainer:
 
     def __init__(self, env, config):
         super().__init__()
-        self.MarkovDecisionProcess = namedtuple('MarkovDecision', ['state', 'action', 'log_prob', 'vs_t', 'entropy'])
         self.env = env
         self.config = config
         self.gamma = config['gamma']
         self.input_channels = config['stack_frames']
         self.device = config['device']
         self.epochs = config['num_epochs']
-        self.batch = config['batch_size']
+        self.mini_batch = config['batch_size']
+        self.c1, self.c2 = config['c1'], config['c2']
         self.writer = SummaryWriter(flush_secs=5)
         self.policy = Policy(len(available_actions), 1, self.input_channels).to(self.device)
         self.last_episode, optim_params, self.running_reward = self.policy.load_checkpoint(config['params_path'])
@@ -44,54 +44,54 @@ class Trainer:
         # It prevents the model from picking always the same action
         m = torch.distributions.Categorical(probs)
         action = m.sample()
-        self.policy.saved_current_mdp.append(self.MarkovDecisionProcess(state, action.item(), m.log_prob(action), vs_t, m.entropy()))
-        return available_actions[action.item()]
+        return action.item(), m.log_prob(action), vs_t, m.entropy()
 
-    def run_episode(self):
-        state, ep_reward = self.env.reset(), 0
+    def run_episode(self, current_steps):
+        state, ep_reward, steps = self.env.reset(), 0, 0
         for t in range(self.env.spec().max_episode_steps):  # Protecting from scenarios where you are mostly stopped
-            action = self.select_action(state)
-            state, reward, done, _ = self.env.step(action)
-            self.policy.rewards.append(reward)
+            action_id, action_log_prob, vs_t, entropy = self.select_action(state)
+            next_state, reward, done, _ = self.env.step(available_actions[action_id])
+            # Store transition to memory
+            self.memory.push(state, action_id, action_log_prob, entropy, reward, vs_t, next_state)
 
+            steps += 1
+            current_steps += 1
             ep_reward += reward
-            if done:
+            # TODO: memory size
+            if done or current_steps == 2000:
                 break
 
-        return ep_reward
+        # Update running reward
+        self.running_reward = 0.05 * ep_reward + (1 - 0.05) * self.running_reward
+        self.logging_episode(i_episode, ep_reward)
+        return steps
 
-    def policy_update(self, iteration, sample_ids):
+    def policy_update(self, transitions):
+        # Get transitions values
+        batch = ReplayMemory.Transition(*zip(*transitions))
+        state_batch = torch.cat(batch.state)
+        action_batch = torch.cat(batch.action)
+        reward_batch = torch.cat(batch.reward)
+        log_prop_batch = torch.cat(batch.log_prob)
+        entropy_batch = torch.cat(batch.entropy)
+        next_state_batch = torch.cat(batch.next_step)
 
-        # Take one batch:
-        transitions = self.memory.from_indexes(sample_ids)
-        
+        # TODO: need to apply the mask for last states of the episode?
+        non_final_mask = torch.tensor(tuple(map(lambda s: s is not None, batch.next_state)), device=device, dtype=torch.bool)
+        non_final_next_states = torch.cat([s for s in batch.next_state if s is not None])
 
-        g = 0
-        policy_loss = []
-        value_losses = []
-        returns = []
+        next_state_values = torch.zeros(self.batch_size, device=self.device)
+        next_state_values[non_final_mask] = self.policy(non_final_next_states).max(dim=1)[0].detach()
 
-        for r in self.policy.rewards[::-1]:
-            g = r + self.gamma * g
-            returns.insert(0, g)
+        l_clip = 0 # good luck
+        with torch.no_grad:
+            _, v_t1 = self.policy(next_state_batch)
+            v_targ = reward_batch + self.gamma * v_t1
 
-        returns = torch.tensor(returns).to(self.device)
-        # Normalize returns (this usually accelerates convergence)
-        eps = np.finfo(np.float32).eps.item()
-        returns = (returns - returns.mean()) / (returns.std() + eps)
-        for (log_prob, baseline), G in zip(self.policy.saved_log_probs, returns):
-            advantage = G - baseline.item()
+        # TODO: k epochs and transitions loop
+        l_vp = nn.SmoothL1Loss(v_theta - v_targ)
+        l_entropy = self.c2 * entropy_batch
 
-            # calculate actor (policy) loss
-            policy_loss.append(-log_prob * advantage)
-
-            # calculate critic (value) loss using L1 smooth loss
-            value_losses.append(F.smooth_l1_loss(baseline.squeeze(), G))
-
-        l_t_clip = 0
-        l_t_vf = 0
-        s_t_entropy = 0
-        # Update policy:
         self.optimizer.zero_grad()
         policy_loss = torch.stack(policy_loss).sum() + torch.stack(value_losses).sum()
         self.writer.add_scalar('loss', policy_loss.item(), iteration)
@@ -113,6 +113,7 @@ class Trainer:
     def train(self):
         # Training loop
         print("Target reward: {}".format(self.env.spec().reward_threshold))
+        # TODO: When do we finish?
         for i_episode in range(self.config['num_episodes'] - self.last_episode):
             # Convert to 1-indexing to reduce complexity
             i_episode += 1
@@ -120,18 +121,21 @@ class Trainer:
             i_episode = i_episode + self.last_episode
 
             # Collect experience // Filling the memory (2000 positions)
-            for i in range(2):
-                ep_reward = self.run_episode()
-                # Update running reward
-                self.running_reward = 0.05 * ep_reward + (1 - 0.05) * self.running_reward
-                self.logging_episode(i_episode, ep_reward)
+            # TODO: loop until we get 2k transitions in the memory
+            # TODO: hyperparam for memory size
+            steps = 0
+            while steps <= 2000:
+                steps += self.run_episode(steps)
 
-            # Take epochs * batch random index
-            indexes = torch.randperm(self.epochs * self.batch)
-            for k in range(0, self.epochs, self.batch):
-                end = k + self.batch
-                self.policy_update(k, indexes[k:end])
+            # Train the model num_epochs time with mini-batch strategy
+            for i in range(self.epochs):
+                # Train the model with batch-size transitions
+                # TODO: replace 2k for memory size
+                self.memory.shuffle()
+                for k in range(0, 2000, self.mini_batch):
+                    self.policy_update(self.memory.get_batch())
 
+            # TODO: Is this necessary? Memory is rounded
             self.clean_training_batch()
 
             # Saving each log interval, at the end of the episodes or when training is complete
