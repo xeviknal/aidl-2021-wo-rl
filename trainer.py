@@ -71,10 +71,11 @@ class Trainer:
         batch = ReplayMemory.Transition(*zip(*transitions))
         state_batch = torch.cat(batch.state)
         action_batch = torch.cat(batch.action)
-        reward_batch = torch.cat(batch.reward)
         log_prop_batch = torch.cat(batch.log_prob)
         entropy_batch = torch.cat(batch.entropy)
-        next_state_batch = torch.cat(batch.next_step)
+        reward_batch = torch.cat(batch.reward)
+        vs_t_batch = torch.cat(batch.vs_t)
+        next_state_batch = torch.cat(batch.next_state)
 
         # TODO: need to apply the mask for last states of the episode?
         non_final_mask = torch.tensor(tuple(map(lambda s: s is not None, batch.next_state)), device=device, dtype=torch.bool)
@@ -87,9 +88,11 @@ class Trainer:
         with torch.no_grad:
             _, v_t1 = self.policy(next_state_batch)
             v_targ = reward_batch + self.gamma * v_t1
+            adv = v_targ - vs_t_batch # this is copied from other code; where is Q(s,a)?
 
         # TODO: k epochs and transitions loop
-        l_vp = nn.SmoothL1Loss(v_theta - v_targ)
+        v_theta = self.policy(state_batch)
+        l_vf = nn.SmoothL1Loss(v_theta - v_targ) # value loss
         l_entropy = self.c2 * entropy_batch
 
         self.optimizer.zero_grad()
