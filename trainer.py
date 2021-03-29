@@ -20,12 +20,14 @@ class Trainer:
         self.input_channels = config['stack_frames']
         self.device = config['device']
         self.epochs = config['num_epochs']
-        self.mini_batch = config['batch_size']
-        self.c1, self.c2 = config['c1'], config['c2']
+        self.ppo_epochs = config['num_ppo_epochs']
+        self.mini_batch = config['mini_batch_size']
+        self.memory_size = config['memory_size']
+        self.c1, self.c2, self.eps = config['c1'], config['c2'], config['eps']
         self.writer = SummaryWriter(flush_secs=5)
         self.policy = Policy(len(available_actions), 1, self.input_channels).to(self.device)
-        self.last_episode, optim_params, self.running_reward = self.policy.load_checkpoint(config['params_path'])
-        self.memory = ReplayMemory(2000)
+        self.last_epoch, optim_params, self.running_reward = self.policy.load_checkpoint(config['params_path'])
+        self.memory = ReplayMemory(self.memory_size, self.mini_batch)
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
         if optim_params is not None:
             self.optimizer.load_state_dict(optim_params)
@@ -54,21 +56,20 @@ class Trainer:
             # Store transition to memory
             self.memory.push(state, action_id, action_log_prob, entropy, reward, vs_t, next_state)
 
+            state = next_state
             steps += 1
             current_steps += 1
             ep_reward += reward
-            # TODO: memory size
-            if done or current_steps == 2000:
+            if done or current_steps == self.memory_size:
                 break
 
         # Update running reward
         self.running_reward = 0.05 * ep_reward + (1 - 0.05) * self.running_reward
-        self.logging_episode(i_episode, ep_reward)
-        return steps
+        return steps, ep_reward
 
-    def policy_update(self, transitions):
+    def policy_update(self, transitions, iteration):
         # Get transitions values
-        batch = ReplayMemory.Transition(*zip(*transitions))
+        batch = Transition(*zip(*transitions))
         state_batch = torch.cat(batch.state)
         action_batch = torch.cat(batch.action)
         old_log_prop_batch = torch.cat(batch.log_prob)
@@ -78,7 +79,7 @@ class Trainer:
         next_state_batch = torch.cat(batch.next_step)
 
         # TODO: need to apply the mask for last states of the episode?
-        non_final_mask = torch.tensor(tuple(map(lambda s: s is not None, batch.next_state)), device=device, dtype=torch.bool)
+        non_final_mask = torch.tensor(tuple(map(lambda s: s is not None, batch.next_state)), device=self.device, dtype=torch.bool)
         non_final_next_states = torch.cat([s for s in batch.next_state if s is not None])
 
         next_state_values = torch.zeros(self.batch_size, device=self.device)
@@ -97,8 +98,7 @@ class Trainer:
         #  Computing clipped loss:
         _, new_log_prob_batch, _, _ = self.select_action(state_batch)
         rt = torch.exp(new_log_prob_batch) / torch.exp(old_log_prop_batch)
-        eps = 0.02
-        clipped = adv * torch.clip(rt, 1.0 - eps, 1.0 + eps)
+        clipped = adv * torch.clip(rt, 1.0 - self.eps, 1.0 + self.eps)
         lclip = torch.min(rt * adv, clipped)
 
         loss = lclip - l_vf + l_entropy
@@ -113,9 +113,9 @@ class Trainer:
         del self.policy.saved_log_probs[:]
         del self.policy.rewards[:]
 
-    def logging_episode(self, i_episode, ep_reward):
+    def logging_episode(self, i_episode, ep_reward, running_reward):
         self.writer.add_scalar('reward', ep_reward, i_episode)
-        self.writer.add_scalar('running reward', self.running_reward, i_episode)
+        self.writer.add_scalar('running reward', running_reward, i_episode)
         # self.writer.add_scalar('mean entropy', np.mean(self.policy.entropies), i_episode)
         # self.writer.add_scalar('mean action prob',
         #                       torch.mean(torch.exp(torch.Tensor(self.policy.saved_log_probs)[:, :1])), i_episode)
@@ -123,37 +123,37 @@ class Trainer:
     def train(self):
         # Training loop
         print("Target reward: {}".format(self.env.spec().reward_threshold))
-        # TODO: When do we finish?
-        for i_episode in range(self.config['num_episodes'] - self.last_episode):
-            # Convert to 1-indexing to reduce complexity
-            i_episode += 1
+        for epoch in range(self.epochs - self.last_epoch - 1):
             # The episode counting starts from last checkpoint
-            i_episode = i_episode + self.last_episode
+            epoch += self.last_epoch
 
-            # Collect experience // Filling the memory (2000 positions)
-            # TODO: loop until we get 2k transitions in the memory
-            # TODO: hyperparam for memory size
-            steps = 0
-            while steps <= 2000:
-                steps += self.run_episode(steps)
+            # Collect experience // Filling the memory (self.memory_size positions)
+            steps, ep_reward, ep_count = 0, 0, 0
+            while steps < self.memory_size:
+                ep_steps, ep_reward = self.run_episode(steps)
+                steps += ep_steps
+                ep_count += 1
 
             # Train the model num_epochs time with mini-batch strategy
-            for i in range(self.epochs):
+            for ppo_epoch in range(self.ppo_epochs):
                 # Train the model with batch-size transitions
-                # TODO: replace 2k for memory size
                 self.memory.shuffle()
-                for k in range(0, 2000, self.mini_batch):
-                    self.policy_update(self.memory.get_batch())
+                for k in range(0, self.memory_size, self.mini_batch):
+                    # TODO: define number of update
+                    self.policy_update(self.memory.get_batch(), 100)
 
             # TODO: Is this necessary? Memory is rounded
             self.clean_training_batch()
 
+            self.logging_episode(self.epochs, ep_reward, self.running_reward)
+
             # Saving each log interval, at the end of the episodes or when training is complete
             # TODO: catch keyboard interrupt
-            if i_episode % self.config['log_interval'] == 0 or i_episode == self.config['num_episodes'] or self.running_reward > self.env.spec().reward_threshold:
-                print('Episode {}\tLast reward: {:.2f}\tAverage reward: {:.2f}'.format(
-                    i_episode, ep_reward, self.running_reward))
-                self.policy.save_checkpoint(self.config['params_path'], i_episode, self.running_reward, self.optimizer)
+            if epoch % self.config['log_interval'] == 0 or epoch == self.epochs \
+                    or self.running_reward > self.env.spec().reward_threshold:
+                print('Epoch {}\tLast reward: {:.2f}\tAverage reward: {:.2f}'.format(
+                    epoch, ep_reward, self.running_reward))
+                self.policy.save_checkpoint(self.config['params_path'], epoch, self.running_reward, self.optimizer)
 
             if self.running_reward > self.env.spec().reward_threshold:
                 print("Solved!")
