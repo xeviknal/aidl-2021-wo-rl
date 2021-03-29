@@ -71,11 +71,11 @@ class Trainer:
         batch = ReplayMemory.Transition(*zip(*transitions))
         state_batch = torch.cat(batch.state)
         action_batch = torch.cat(batch.action)
-        log_prop_batch = torch.cat(batch.log_prob)
+        old_log_prop_batch = torch.cat(batch.log_prob)
         entropy_batch = torch.cat(batch.entropy)
         reward_batch = torch.cat(batch.reward)
-        vs_t_batch = torch.cat(batch.vs_t)
-        next_state_batch = torch.cat(batch.next_state)
+        vst_batch = torch.cat(batch.vs_t)
+        next_state_batch = torch.cat(batch.next_step)
 
         # TODO: need to apply the mask for last states of the episode?
         non_final_mask = torch.tensor(tuple(map(lambda s: s is not None, batch.next_state)), device=device, dtype=torch.bool)
@@ -84,21 +84,28 @@ class Trainer:
         next_state_values = torch.zeros(self.batch_size, device=self.device)
         next_state_values[non_final_mask] = self.policy(non_final_next_states).max(dim=1)[0].detach()
 
-        l_clip = 0 # good luck
         with torch.no_grad:
+            # Computing expected future return for t+1 step: Gt+1
             _, v_t1 = self.policy(next_state_batch)
             v_targ = reward_batch + self.gamma * v_t1
-            adv = v_targ - vs_t_batch # this is copied from other code; where is Q(s,a)?
+            # Computing advantage
+            adv = vst_batch - v_targ
 
-        # TODO: k epochs and transitions loop
-        v_theta = self.policy(state_batch)
-        l_vf = nn.SmoothL1Loss(v_theta - v_targ) # value loss
+        l_vf = self.c1 * nn.SmoothL1Loss(vst_batch, v_targ)
         l_entropy = self.c2 * entropy_batch
 
+        #  Computing clipped loss:
+        _, new_log_prob_batch, _, _ = self.select_action(state_batch)
+        rt = torch.exp(new_log_prob_batch) / torch.exp(old_log_prop_batch)
+        eps = 0.02
+        clipped = adv * torch.clip(rt, 1.0 - eps, 1.0 + eps)
+        lclip = torch.min(rt * adv, clipped)
+
+        loss = lclip - l_vf + l_entropy
+
         self.optimizer.zero_grad()
-        policy_loss = torch.stack(policy_loss).sum() + torch.stack(value_losses).sum()
-        self.writer.add_scalar('loss', policy_loss.item(), iteration)
-        policy_loss.backward()
+        self.writer.add_scalar('loss', loss.item(), iteration)
+        loss.backward()
         self.optimizer.step()
 
     def clean_training_batch(self):
