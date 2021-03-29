@@ -21,20 +21,22 @@ class Policy(nn.Module):
             nn.Flatten(),
             nn.Linear(32 * 4 * 4, 256),  # [ 512, 256 ]
             nn.ReLU(),
+            nn.Linear(256, 128),
+            nn.ReLU(),
         )
 
         # actor's layer
         self.actor_head = nn.Sequential(
-            nn.Linear(256, 128),
+            nn.Linear(128, 64),
             nn.ReLU(),
-            nn.Linear(128, actor_output),
+            nn.Linear(64, actor_output)
         )
 
         # critic's layer
         self.critic_head = nn.Sequential(
-            nn.Linear(256, 128),
+            nn.Linear(128, 64),
             nn.ReLU(),
-            nn.Linear(128, critic_output)
+            nn.Linear(64, critic_output)
         )
 
         self.saved_log_probs = []
