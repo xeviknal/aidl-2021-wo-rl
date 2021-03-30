@@ -85,12 +85,13 @@ class Trainer:
         next_state_values = torch.zeros(self.batch_size, device=self.device)
         next_state_values[non_final_mask] = self.policy(non_final_next_states).max(dim=1)[0].detach()
 
+        # This should go outside of the policy update
         with torch.no_grad:
             # Computing expected future return for t+1 step: Gt+1
             _, v_t1 = self.policy(next_state_batch)
             v_targ = reward_batch + self.gamma * v_t1
             # Computing advantage
-            adv = vst_batch - v_targ
+            adv = v_targ - vst_batch
 
         l_vf = self.c1 * nn.SmoothL1Loss(vst_batch, v_targ)
         l_entropy = self.c2 * entropy_batch
