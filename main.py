@@ -11,7 +11,7 @@ from pyvirtualdisplay import Display
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 #for concurrent runs and logging
-experiment='RL-baseline-v4'
+experiment='RL-baseline-v5'
 
 if __name__ == "__main__":
     hyperparams = {
