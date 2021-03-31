@@ -8,33 +8,36 @@ class Policy(nn.Module):
 
     def __init__(self, actor_output, critic_output, inputs=4):
         super(Policy, self).__init__()
-        self.pipeline = nn.Sequential(
-            nn.Conv2d(inputs, 12, kernel_size=3, stride=2, padding=1),  # [12, 48, 48]
+        self.pipeline = nn.Sequential( # input = [4, 96, 96]
+            nn.Conv2d(inputs, 8, kernel_size=4, stride=2),  # [8, 47, 47]
             nn.ReLU(),
-            nn.MaxPool2d(2),  # [12, 24, 24]
-            nn.Conv2d(12, 24, kernel_size=3),  # [24, 22, 22]
+            nn.Conv2d(8, 16, kernel_size=3, stride=2), # [16, 23, 23]
             nn.ReLU(),
-            nn.MaxPool2d(2),  # [24, 11, 11]
-            nn.Conv2d(24, 32, 4),  # [32, 8, 8]
+            nn.Conv2d(16, 32, kernel_size=3, stride=2), # [32, 11, 11]
             nn.ReLU(),
-            nn.MaxPool2d(2),  # [32, 4, 4]
+            nn.Conv2d(32, 64, kernel_size=3, stride=2), # [64, 5, 5]
+            nn.ReLU(),
+            nn.Conv2d(64, 128, kernel_size=3, stride=1), # [128, 3, 3]
+            nn.ReLU(),
+            nn.Conv2d(128, 256, kernel_size=3, stride=1), # [256, 1, 1]
+            nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(32 * 4 * 4, 256),  # [ 512, 256 ]
-            nn.ReLU(),
             nn.Linear(256, 128),
             nn.ReLU(),
+            nn.Linear(128, 64),
+            nn.ReLU()
         )
 
         # actor's layer
         self.actor_head = nn.Sequential(
-            nn.Linear(128, 64),
+            nn.Linear(64, 64),
             nn.ReLU(),
             nn.Linear(64, actor_output)
         )
 
         # critic's layer
         self.critic_head = nn.Sequential(
-            nn.Linear(128, 64),
+            nn.Linear(64, 64),
             nn.ReLU(),
             nn.Linear(64, critic_output)
         )
