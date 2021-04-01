@@ -8,7 +8,7 @@ Transition = namedtuple(
 
 class ReplayMemory(object):
     def __init__(self, capacity, batch_size):
-        self.memory = []
+        self.memory = np.empty(capacity, dtype=Transition)
         self.capacity = capacity
         self.batch_size = batch_size
         self.current_batch_starts = 0

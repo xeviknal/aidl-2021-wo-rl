@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 import torch.nn as nn
-from collections import namedtuple
+from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 
 
 from policy import Policy
@@ -32,13 +32,13 @@ class Trainer:
         if optim_params is not None:
             self.optimizer.load_state_dict(optim_params)
 
-    def select_action(self, state):
+    def select_action(self, state, batch_size):
         if state is None:  # First state is always None
             # Adding the starting signal as a 0's tensor
             state = np.zeros((self.input_channels, 96, 96))
         else:
             state = np.asarray(state)
-        state = torch.from_numpy(state).float().unsqueeze(0).view(1, self.input_channels, 96, 96).to(self.device)
+        state = torch.from_numpy(state).float().unsqueeze(0).view(batch_size, self.input_channels, 96, 96).to(self.device)
         probs, vs_t = self.policy(state)
         # vs_t = return estimated for the current state
 
@@ -51,7 +51,7 @@ class Trainer:
     def run_episode(self, current_steps):
         state, ep_reward, steps = self.env.reset(), 0, 0
         for t in range(self.env.spec().max_episode_steps):  # Protecting from scenarios where you are mostly stopped
-            action_id, action_log_prob, vs_t, entropy = self.select_action(state)
+            action_id, action_log_prob, vs_t, entropy = self.select_action(state, 1)
             next_state, reward, done, _ = self.env.step(available_actions[action_id])
             # Store transition to memory
             self.memory.push(state, action_id, action_log_prob, entropy, reward, vs_t, next_state)
@@ -67,42 +67,50 @@ class Trainer:
         self.running_reward = 0.05 * ep_reward + (1 - 0.05) * self.running_reward
         return steps, ep_reward
 
-    def policy_update(self, transitions, iteration):
-        # Get transitions values
-        batch = Transition(*zip(*transitions))
-        state_batch = torch.cat(batch.state)
-        action_batch = torch.cat(batch.action)
-        old_log_prop_batch = torch.cat(batch.log_prob)
-        entropy_batch = torch.cat(batch.entropy)
-        reward_batch = torch.cat(batch.reward)
+    def compute_advantages(self):
+        batch = Transition(*zip(*self.memory.memory))
         vst_batch = torch.cat(batch.vs_t)
-        next_state_batch = torch.cat(batch.next_step)
+        reward_batch = torch.FloatTensor(batch.reward)
+        next_state_batch = torch.from_numpy(np.asarray(batch.next_state)).float().unsqueeze(0).view(len(self.memory), self.input_channels, 96, 96).to(self.device)
 
-        # TODO: need to apply the mask for last states of the episode?
-        non_final_mask = torch.tensor(tuple(map(lambda s: s is not None, batch.next_state)), device=self.device, dtype=torch.bool)
-        non_final_next_states = torch.cat([s for s in batch.next_state if s is not None])
-
-        next_state_values = torch.zeros(self.batch_size, device=self.device)
-        next_state_values[non_final_mask] = self.policy(non_final_next_states).max(dim=1)[0].detach()
-
-        # This should go outside of the policy update
-        with torch.no_grad:
+        with torch.no_grad():
             # Computing expected future return for t+1 step: Gt+1
             _, v_t1 = self.policy(next_state_batch)
             v_targ = reward_batch + self.gamma * v_t1
             # Computing advantage
             adv = v_targ - vst_batch
 
+        return v_targ, adv
+
+    def policy_update(self, transitions, v_targ, adv, iteration):
+        # Get transitions values
+        batch = Transition(*zip(*transitions))
+        state_batch = batch.state
+        old_log_prop_batch = torch.cat(batch.log_prob)
+        entropy_batch = torch.cat(batch.entropy)
+        vst_batch = torch.cat(batch.vs_t)
+
+        # TODO: need to apply the mask for last states of the episode?
+        # non_final_mask = torch.tensor(tuple(map(lambda s: s is not None, batch.next_state)), device=self.device, dtype=torch.bool)
+        # non_final_next_states = torch.cat([s for s in batch.next_state if s is not None])
+        # next_state_values = torch.zeros(self.batch_size, device=self.device)
+        # next_state_values[non_final_mask] = self.policy(non_final_next_states).max(dim=1)[0].detach()
+
         l_vf = self.c1 * nn.SmoothL1Loss(vst_batch, v_targ)
         l_entropy = self.c2 * entropy_batch
 
         #  Computing clipped loss:
-        _, new_log_prob_batch, _, _ = self.select_action(state_batch)
-        rt = torch.exp(new_log_prob_batch) / torch.exp(old_log_prop_batch)
-        clipped = adv * torch.clip(rt, 1.0 - self.eps, 1.0 + self.eps)
-        lclip = torch.min(rt * adv, clipped)
+        _, new_log_prob_batch, _, _ = self.select_action(state_batch, len(transitions))
 
-        loss = lclip - l_vf + l_entropy
+        # For performance reasons. rt = exp(new_log_prob) / exp(old_log_prop)
+        rt = torch.exp(new_log_prob_batch - old_log_prop_batch)
+        clipped = adv * torch.clip(rt, 1.0 - self.eps, 1.0 + self.eps)
+        # Why should we negate this loss component? SGD perhaps?
+        lclip = -torch.min(rt * adv, clipped)
+
+        # SGD perhaps?
+        # loss definition = lclip - l_vf + l_entropy
+        loss = lclip + l_vf - l_entropy
 
         self.optimizer.zero_grad()
         self.writer.add_scalar('loss', loss.item(), iteration)
@@ -135,13 +143,14 @@ class Trainer:
                 steps += ep_steps
                 ep_count += 1
 
+            v_targ, adv = self.compute_advantages()
+
             # Train the model num_epochs time with mini-batch strategy
             for ppo_epoch in range(self.ppo_epochs):
                 # Train the model with batch-size transitions
-                self.memory.shuffle()
-                for k in range(0, self.memory_size, self.mini_batch):
+                for index in BatchSampler(SubsetRandomSampler(range(self.memory_size)), self.mini_batch, False):
                     # TODO: define number of update
-                    self.policy_update(self.memory.get_batch(), 100)
+                    self.policy_update(self.memory.memory[index], v_targ[index], adv[index], 100)
 
             # TODO: Is this necessary? Memory is rounded
             self.clean_training_batch()
