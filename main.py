@@ -19,7 +19,7 @@ if __name__ == "__main__":
         'stack_frames': 4,
         'device': device,
         'params_path': './params/policy-params.dl',
-        'train': True
+        'train': False
     }
 
     env = CarRacingEnv(device, hyperparams['stack_frames'], hyperparams['train'])
