@@ -15,7 +15,7 @@ experiment='RL-baseline-v5-exp1'
 
 if __name__ == "__main__":
     hyperparams = {
-        'num_episodes': 20000,  # Number of training episodes
+        'num_episodes': 30000,  # Number of training episodes
         'lr': 1e-3,  # Learning rate
         'gamma': 0.99,  # Discount rate
         'log_interval': 10,  # controls how often we log progress
