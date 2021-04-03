@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 
 
@@ -69,8 +70,8 @@ class Trainer:
 
     def compute_advantages(self):
         batch = Transition(*zip(*self.memory.memory))
-        vst_batch = torch.cat(batch.vs_t)
-        reward_batch = torch.FloatTensor(batch.reward)
+        vst_batch = torch.cat(batch.vs_t).to(self.device)
+        reward_batch = torch.FloatTensor(batch.reward).to(self.device)
         next_state_batch = torch.from_numpy(np.asarray(batch.next_state)).float().unsqueeze(0).view(len(self.memory), self.input_channels, 96, 96).to(self.device)
 
         with torch.no_grad():
@@ -96,7 +97,7 @@ class Trainer:
         # next_state_values = torch.zeros(self.batch_size, device=self.device)
         # next_state_values[non_final_mask] = self.policy(non_final_next_states).max(dim=1)[0].detach()
 
-        l_vf = self.c1 * nn.SmoothL1Loss(vst_batch, v_targ)
+        l_vf = self.c1 * F.smooth_l1_loss(vst_batch, v_targ)
         l_entropy = self.c2 * entropy_batch
 
         #  Computing clipped loss:
