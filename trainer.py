@@ -33,15 +33,17 @@ class Trainer:
         if optim_params is not None:
             self.optimizer.load_state_dict(optim_params)
 
-    def select_action(self, state, batch_size):
-        # TODO: this code only works when generating transitions, but when recovering states from memory, the conversion is unneeded.
+    def prepare_state(self, state):
         # we need to fix how we choose actions using state tensors recovered from memory
         if state is None:  # First state is always None
             # Adding the starting signal as a 0's tensor
             state = np.zeros((self.input_channels, 96, 96))
         else:
             state = np.asarray(state)
-        state = torch.from_numpy(state).float().unsqueeze(0).view(batch_size, self.input_channels, 96, 96).to(self.device)
+        state = torch.from_numpy(state).float().unsqueeze(0).view(1, self.input_channels, 96, 96).to(self.device)
+        return state
+
+    def select_action(self, state):
         probs, vs_t = self.policy(state)
         # vs_t = return estimated for the current state
 
@@ -50,12 +52,13 @@ class Trainer:
         m = torch.distributions.Categorical(probs)
         action = m.sample()
         # We return the state in order to make sure that we operate with a valid tensor
-        return action.item(), m.log_prob(action), vs_t, m.entropy()
+        return action, m.log_prob(action), vs_t, m.entropy(), state
 
     def run_episode(self, current_steps):
         state, ep_reward, steps = self.env.reset(), 0, 0
         for t in range(self.env.spec().max_episode_steps):  # Protecting from scenarios where you are mostly stopped
-            action_id, action_log_prob, vs_t, entropy, state = self.select_action(state, 1)
+            state = self.prepare_state(state)
+            action_id, action_log_prob, vs_t, entropy, state = self.select_action(state)
             next_state, reward, done, _ = self.env.step(available_actions[action_id])
             # Store transition to memory
             self.memory.push(state, action_id, action_log_prob, entropy, reward, vs_t, next_state)
@@ -89,7 +92,7 @@ class Trainer:
     def policy_update(self, transitions, v_targ, adv, iteration):
         # Get transitions values
         batch = Transition(*zip(*transitions))
-        state_batch = batch.state
+        state_batch = torch.cat(batch.state)
         old_log_prop_batch = torch.cat(batch.log_prob)
         entropy_batch = torch.cat(batch.entropy)
         vst_batch = torch.cat(batch.vs_t)
@@ -104,10 +107,9 @@ class Trainer:
         l_entropy = self.c2 * entropy_batch
 
         #  Computing clipped loss:
-        _, new_log_prob_batch, _, _, _ = self.select_action(state_batch, len(transitions))
+        _, new_log_prob_batch, _, _, _ = self.select_action(state_batch)
 
         # For performance reasons. rt = exp(new_log_prob) / exp(old_log_prop)
-        # TODO: are we using Softmax or LogSoftmax for the probs? If we're using probs rather than log_prob, whis line is wrong.
         rt = torch.exp(new_log_prob_batch - old_log_prop_batch)
         clipped = adv * torch.clip(rt, 1.0 - self.eps, 1.0 + self.eps)
         # Why should we negate this loss component? SGD perhaps?
