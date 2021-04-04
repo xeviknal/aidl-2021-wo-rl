@@ -34,6 +34,8 @@ class Trainer:
             self.optimizer.load_state_dict(optim_params)
 
     def select_action(self, state, batch_size):
+        # TODO: this code only works when generating transitions, but when recovering states from memory, the conversion is unneeded.
+        # we need to fix how we choose actions using state tensors recovered from memory
         if state is None:  # First state is always None
             # Adding the starting signal as a 0's tensor
             state = np.zeros((self.input_channels, 96, 96))
@@ -47,12 +49,13 @@ class Trainer:
         # It prevents the model from picking always the same action
         m = torch.distributions.Categorical(probs)
         action = m.sample()
+        # We return the state in order to make sure that we operate with a valid tensor
         return action.item(), m.log_prob(action), vs_t, m.entropy()
 
     def run_episode(self, current_steps):
         state, ep_reward, steps = self.env.reset(), 0, 0
         for t in range(self.env.spec().max_episode_steps):  # Protecting from scenarios where you are mostly stopped
-            action_id, action_log_prob, vs_t, entropy = self.select_action(state, 1)
+            action_id, action_log_prob, vs_t, entropy, state = self.select_action(state, 1)
             next_state, reward, done, _ = self.env.step(available_actions[action_id])
             # Store transition to memory
             self.memory.push(state, action_id, action_log_prob, entropy, reward, vs_t, next_state)
@@ -101,9 +104,10 @@ class Trainer:
         l_entropy = self.c2 * entropy_batch
 
         #  Computing clipped loss:
-        _, new_log_prob_batch, _, _ = self.select_action(state_batch, len(transitions))
+        _, new_log_prob_batch, _, _, _ = self.select_action(state_batch, len(transitions))
 
         # For performance reasons. rt = exp(new_log_prob) / exp(old_log_prop)
+        # TODO: are we using Softmax or LogSoftmax for the probs? If we're using probs rather than log_prob, whis line is wrong.
         rt = torch.exp(new_log_prob_batch - old_log_prop_batch)
         clipped = adv * torch.clip(rt, 1.0 - self.eps, 1.0 + self.eps)
         # Why should we negate this loss component? SGD perhaps?
@@ -114,7 +118,8 @@ class Trainer:
         loss = lclip + l_vf - l_entropy
 
         self.optimizer.zero_grad()
-        self.writer.add_scalar('loss', loss.item(), iteration)
+        # This line throws an error
+        #self.writer.add_scalar('loss', loss.item(), iteration)
         loss.backward()
         self.optimizer.step()
 
