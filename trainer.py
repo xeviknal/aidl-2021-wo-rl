@@ -28,7 +28,7 @@ class Trainer:
         self.writer = SummaryWriter(flush_secs=5)
         self.policy = Policy(len(available_actions), 1, self.input_channels).to(self.device)
         self.last_epoch, optim_params, self.running_reward = self.policy.load_checkpoint(config['params_path'])
-        self.memory = ReplayMemory(self.memory_size, self.mini_batch)
+        self.memory = ReplayMemory(self.memory_size)
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
         if optim_params is not None:
             self.optimizer.load_state_dict(optim_params)
@@ -126,7 +126,6 @@ class Trainer:
         self.optimizer.step()
 
     def clean_training_batch(self):
-        self.memory.clear()  # Clearing memory
         del self.policy.saved_log_probs[:]
         del self.policy.rewards[:]
 
@@ -158,7 +157,7 @@ class Trainer:
                 # Train the model with batch-size transitions
                 for index in BatchSampler(SubsetRandomSampler(range(self.memory_size)), self.mini_batch, False):
                     # TODO: define number of update
-                    self.policy_update(self.memory.memory[index], v_targ[index], adv[index], 100)
+                    self.policy_update(self.memory[index], v_targ[index], adv[index], 100)
 
             # TODO: Is this necessary? Memory is rounded
             self.clean_training_batch()
