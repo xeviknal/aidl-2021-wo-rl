@@ -29,6 +29,7 @@ class Trainer:
         self.policy = Policy(len(available_actions), 1, self.input_channels).to(self.device)
         self.last_epoch, optim_params, self.running_reward = self.policy.load_checkpoint(config['params_path'])
         self.memory = ReplayMemory(self.memory_size)
+        self.value_loss = nn.SmoothL1Loss()
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
         if optim_params is not None:
             self.optimizer.load_state_dict(optim_params)
@@ -77,7 +78,7 @@ class Trainer:
     def compute_advantages(self):
         batch = Transition(*zip(*self.memory.memory))
         vst_batch = torch.cat(batch.vs_t).to(self.device)
-        reward_batch = torch.FloatTensor(batch.reward).to(self.device)
+        reward_batch = torch.FloatTensor(batch.reward).view(-1, 1).to(self.device)
         next_state_batch = torch.from_numpy(np.asarray(batch.next_state)).float().unsqueeze(0).view(len(self.memory), self.input_channels, 96, 96).to(self.device)
 
         with torch.no_grad():
@@ -94,7 +95,7 @@ class Trainer:
         batch = Transition(*zip(*transitions))
         state_batch = torch.cat(batch.state)
         old_log_prop_batch = torch.cat(batch.log_prob)
-        entropy_batch = torch.cat(batch.entropy)
+        entropy_batch = torch.cat(batch.entropy).view(-1, 1)
         vst_batch = torch.cat(batch.vs_t)
 
         # TODO: need to apply the mask for last states of the episode?
@@ -103,8 +104,8 @@ class Trainer:
         # next_state_values = torch.zeros(self.batch_size, device=self.device)
         # next_state_values[non_final_mask] = self.policy(non_final_next_states).max(dim=1)[0].detach()
 
-        l_vf = self.c1 * F.smooth_l1_loss(vst_batch, v_targ)
-        l_entropy = self.c2 * entropy_batch
+        l_vf = self.c1 * self.value_loss(vst_batch, v_targ)
+        l_entropy = self.c2 * entropy_batch.sum()
 
         #  Computing clipped loss:
         _, new_log_prob_batch, _, _, _ = self.select_action(state_batch)
