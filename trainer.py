@@ -4,7 +4,7 @@ import torch.nn as nn
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 from torch.utils.tensorboard import SummaryWriter
 
-from actions import available_actions
+from actions import get_action
 from memory import ReplayMemory, Transition
 from policy import Policy
 
@@ -24,11 +24,13 @@ class Trainer:
         self.memory_size = config['memory_size']
         self.c1, self.c2, self.eps = config['c1'], config['c2'], config['eps']
         self.writer = SummaryWriter(flush_secs=5)
-        self.policy = Policy(len(available_actions), 1, self.input_channels).to(self.device)
+        self.action_set = get_action(config['action_set_num'])
+        self.policy = Policy(len(self.action_set), 1, self.input_channels).to(self.device)
         self.last_epoch, optim_params, self.running_reward = self.policy.load_checkpoint(config['params_path'])
         self.memory = ReplayMemory(self.memory_size)
         self.value_loss = nn.SmoothL1Loss()
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
+        self.experiment = config['experiment']
         if optim_params is not None:
             self.optimizer.load_state_dict(optim_params)
 
@@ -58,7 +60,7 @@ class Trainer:
             with torch.no_grad():
                 state = self.prepare_state(state)
                 action_id, action_log_prob, vs_t, entropy, state = self.select_action(state)
-                next_state, reward, done, _ = self.env.step(available_actions[action_id])
+                next_state, reward, done, _ = self.env.step(self.action_set[action_id.item()])
                 # Store transition to memory
                 self.memory.push(state, action_id, action_log_prob, entropy, reward, vs_t, next_state)
 
@@ -118,17 +120,17 @@ class Trainer:
         loss = -l_clip + l_vf - l_entropy
 
         self.optimizer.zero_grad()
-        self.writer.add_scalar('loss', loss.item(), iteration)
-        self.writer.add_scalar('entropy', l_entropy.item(), iteration)
-        self.writer.add_scalar('ratio', rt.mean().item(), iteration)
-        self.writer.add_scalar('advantage', adv.mean().item(), iteration)
-        self.writer.add_scalar('vf', l_vf.item(), iteration)
+        self.writer.add_scalar(f'{self.experiment}/loss', loss.item(), iteration)
+        self.writer.add_scalar(f'{self.experiment}/entropy', l_entropy.item(), iteration)
+        self.writer.add_scalar(f'{self.experiment}/ratio', rt.mean().item(), iteration)
+        self.writer.add_scalar(f'{self.experiment}/advantage', adv.mean().item(), iteration)
+        self.writer.add_scalar(f'{self.experiment}/vf', l_vf.item(), iteration)
         loss.backward()
         self.optimizer.step()
 
     def logging_episode(self, i_episode, ep_reward, running_reward):
-        self.writer.add_scalar('reward', ep_reward, i_episode)
-        self.writer.add_scalar('running reward', running_reward, i_episode)
+        self.writer.add_scalar(f'{self.experiment}/reward', ep_reward, i_episode)
+        self.writer.add_scalar(f'{self.experiment}/running reward', running_reward, i_episode)
 
     def train(self):
         # Training loop
