@@ -17,11 +17,11 @@ if __name__ == "__main__":
         'mini_batch_size': 128,
         'memory_size': 2000,
         'eps': 0.2,
-        'c1': 0.3,  # TODO: To be defined
-        'c2': 0.4,  # TODO: To be defined
-        'lr': 1e-2,  # Learning rate
+        'c1': 1.,  # Value Function coeff
+        'c2': 0.01,  # Entropy coeff
+        'lr': 1e-3,  # Learning rate
         'gamma': 0.99,  # Discount rate
-        'log_interval': 100,  # controls how often we log progress
+        'log_interval': 10,  # controls how often we log progress
         'stack_frames': 4,
         'device': device,
         'params_path': './params/policy-params.dl',
