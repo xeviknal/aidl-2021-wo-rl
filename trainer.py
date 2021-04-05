@@ -52,7 +52,7 @@ class Trainer:
         # We return the state in order to make sure that we operate with a valid tensor
         return action, m.log_prob(action), vs_t, m.entropy(), state
 
-    def run_episode(self, current_steps):
+    def run_episode(self, epoch, current_steps):
         state, ep_reward, steps = self.env.reset(), 0, 0
         for t in range(self.env.spec().max_episode_steps):  # Protecting from scenarios where you are mostly stopped
             with torch.no_grad():
@@ -70,8 +70,11 @@ class Trainer:
                     break
 
         # Update running reward
-        self.running_reward = 0.05 * ep_reward + (1 - 0.05) * self.running_reward
-        return steps, ep_reward
+        if done:
+            self.running_reward = 0.05 * ep_reward + (1 - 0.05) * self.running_reward
+
+        self.logging_episode(epoch, ep_reward, self.running_reward)
+        return steps
 
     def compute_advantages(self):
         batch = Transition(*zip(*self.memory.memory))
@@ -117,7 +120,8 @@ class Trainer:
         self.optimizer.zero_grad()
         self.writer.add_scalar('loss', loss.item(), iteration)
         self.writer.add_scalar('entropy', l_entropy.item(), iteration)
-        self.writer.add_scalar('clip', l_clip.item(), iteration)
+        self.writer.add_scalar('ratio', rt.mean().item(), iteration)
+        self.writer.add_scalar('advantage', adv.mean().item(), iteration)
         self.writer.add_scalar('vf', l_vf.item(), iteration)
         loss.backward()
         self.optimizer.step()
@@ -135,9 +139,9 @@ class Trainer:
             epoch += self.last_epoch
 
             # Collect experience // Filling the memory (self.memory_size positions)
-            steps, ep_reward, ep_count = 0, 0, 0
+            steps, ep_count = 0, 0
             while steps < self.memory_size:
-                ep_steps, ep_reward = self.run_episode(steps)
+                ep_steps = self.run_episode(epoch, steps)
                 steps += ep_steps
                 ep_count += 1
 
@@ -150,14 +154,11 @@ class Trainer:
                     self.policy_update(self.memory[index], v_targ[index], adv[index], global_step)
                     global_step += 1
 
-            self.logging_episode(self.epochs, ep_reward, self.running_reward)
-
             # Saving each log interval, at the end of the episodes or when training is complete
             # TODO: catch keyboard interrupt
             if epoch % self.config['log_interval'] == 0 or epoch == self.epochs \
                     or self.running_reward > self.env.spec().reward_threshold:
-                print('Epoch {}\tLast reward: {:.2f}\tAverage reward: {:.2f}'.format(
-                    epoch, ep_reward, self.running_reward))
+                print('Epoch {}\t Average reward: {:.2f}'.format(epoch, self.running_reward))
                 self.policy.save_checkpoint(self.config['params_path'], epoch, self.running_reward, self.optimizer)
 
             if self.running_reward > self.env.spec().reward_threshold:
