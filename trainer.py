@@ -1,14 +1,12 @@
-import torch
 import numpy as np
-from torch.utils.tensorboard import SummaryWriter
+import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
+from torch.utils.tensorboard import SummaryWriter
 
-
-from policy import Policy
 from actions import available_actions
 from memory import ReplayMemory, Transition
+from policy import Policy
 
 
 class Trainer:
@@ -35,7 +33,6 @@ class Trainer:
             self.optimizer.load_state_dict(optim_params)
 
     def prepare_state(self, state):
-        # we need to fix how we choose actions using state tensors recovered from memory
         if state is None:  # First state is always None
             # Adding the starting signal as a 0's tensor
             state = np.zeros((self.input_channels, 96, 96))
@@ -58,18 +55,19 @@ class Trainer:
     def run_episode(self, current_steps):
         state, ep_reward, steps = self.env.reset(), 0, 0
         for t in range(self.env.spec().max_episode_steps):  # Protecting from scenarios where you are mostly stopped
-            state = self.prepare_state(state)
-            action_id, action_log_prob, vs_t, entropy, state = self.select_action(state)
-            next_state, reward, done, _ = self.env.step(available_actions[action_id])
-            # Store transition to memory
-            self.memory.push(state, action_id, action_log_prob, entropy, reward, vs_t, next_state)
+            with torch.no_grad():
+                state = self.prepare_state(state)
+                action_id, action_log_prob, vs_t, entropy, state = self.select_action(state)
+                next_state, reward, done, _ = self.env.step(available_actions[action_id])
+                # Store transition to memory
+                self.memory.push(state, action_id, action_log_prob, entropy, reward, vs_t, next_state)
 
-            state = next_state
-            steps += 1
-            current_steps += 1
-            ep_reward += reward
-            if done or current_steps == self.memory_size:
-                break
+                state = next_state
+                steps += 1
+                current_steps += 1
+                ep_reward += reward
+                if done or current_steps == self.memory_size:
+                    break
 
         # Update running reward
         self.running_reward = 0.05 * ep_reward + (1 - 0.05) * self.running_reward
@@ -98,12 +96,6 @@ class Trainer:
         entropy_batch = torch.cat(batch.entropy).view(-1, 1)
         vst_batch = torch.cat(batch.vs_t)
 
-        # TODO: need to apply the mask for last states of the episode?
-        # non_final_mask = torch.tensor(tuple(map(lambda s: s is not None, batch.next_state)), device=self.device, dtype=torch.bool)
-        # non_final_next_states = torch.cat([s for s in batch.next_state if s is not None])
-        # next_state_values = torch.zeros(self.batch_size, device=self.device)
-        # next_state_values[non_final_mask] = self.policy(non_final_next_states).max(dim=1)[0].detach()
-
         l_vf = self.c1 * self.value_loss(vst_batch, v_targ)
         l_entropy = self.c2 * entropy_batch.sum()
 
@@ -113,33 +105,31 @@ class Trainer:
         # For performance reasons. rt = exp(new_log_prob) / exp(old_log_prop)
         rt = torch.exp(new_log_prob_batch - old_log_prop_batch)
         clipped = adv * torch.clip(rt, 1.0 - self.eps, 1.0 + self.eps)
-        # Why should we negate this loss component? SGD perhaps?
-        lclip = -torch.min(rt * adv, clipped)
+        # We apply the mean because we want to compute the expected value
+        l_clip = torch.min(rt * adv, clipped).mean()
 
-        # SGD perhaps?
         # loss definition = lclip - l_vf + l_entropy
-        loss = lclip + l_vf - l_entropy
+        # We want to maximise the prob of optimal action
+        # but SGD looks for the minimum. Therefore, we need
+        # to invert the sign of the loss.
+        loss = -l_clip + l_vf - l_entropy
 
         self.optimizer.zero_grad()
-        # This line throws an error
-        #self.writer.add_scalar('loss', loss.item(), iteration)
+        self.writer.add_scalar('loss', loss.item(), iteration)
+        self.writer.add_scalar('entropy', l_entropy.item(), iteration)
+        self.writer.add_scalar('clip', l_clip.item(), iteration)
+        self.writer.add_scalar('vf', l_vf.item(), iteration)
         loss.backward()
         self.optimizer.step()
-
-    def clean_training_batch(self):
-        del self.policy.saved_log_probs[:]
-        del self.policy.rewards[:]
 
     def logging_episode(self, i_episode, ep_reward, running_reward):
         self.writer.add_scalar('reward', ep_reward, i_episode)
         self.writer.add_scalar('running reward', running_reward, i_episode)
-        # self.writer.add_scalar('mean entropy', np.mean(self.policy.entropies), i_episode)
-        # self.writer.add_scalar('mean action prob',
-        #                       torch.mean(torch.exp(torch.Tensor(self.policy.saved_log_probs)[:, :1])), i_episode)
 
     def train(self):
         # Training loop
         print("Target reward: {}".format(self.env.spec().reward_threshold))
+        global_step = 0
         for epoch in range(self.epochs - self.last_epoch - 1):
             # The episode counting starts from last checkpoint
             epoch += self.last_epoch
@@ -157,11 +147,8 @@ class Trainer:
             for ppo_epoch in range(self.ppo_epochs):
                 # Train the model with batch-size transitions
                 for index in BatchSampler(SubsetRandomSampler(range(self.memory_size)), self.mini_batch, False):
-                    # TODO: define number of update
-                    self.policy_update(self.memory[index], v_targ[index], adv[index], 100)
-
-            # TODO: Is this necessary? Memory is rounded
-            self.clean_training_batch()
+                    self.policy_update(self.memory[index], v_targ[index], adv[index], global_step)
+                    global_step += 1
 
             self.logging_episode(self.epochs, ep_reward, self.running_reward)
 
