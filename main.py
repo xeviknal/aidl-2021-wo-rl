@@ -11,7 +11,7 @@ from pyvirtualdisplay import Display
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 #for concurrent runs and logging
-experiment='ppo-nm'
+experiment='ppo-nm-exp1'
 if __name__ == "__main__":
     hyperparams = {
         'num_epochs': 25000,  # Number of training episodes
@@ -28,7 +28,7 @@ if __name__ == "__main__":
         'device': device,
         'experiment':experiment,
         'params_path': f'./params/policy-params-{experiment}.dl',
-        'action_set_num': 0,
+        'action_set_num': 4,
         'train': True
     }
 
