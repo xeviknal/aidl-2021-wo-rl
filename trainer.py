@@ -2,9 +2,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
+from torch.distributions import Beta
 from torch.utils.tensorboard import SummaryWriter
 
-from actions import get_action
+#from actions import get_action
 from memory import ReplayMemory, Transition
 from policy import Policy
 
@@ -24,8 +25,8 @@ class Trainer:
         self.memory_size = config['memory_size']
         self.c1, self.c2, self.eps = config['c1'], config['c2'], config['eps']
         self.writer = SummaryWriter(flush_secs=5)
-        self.action_set = get_action(config['action_set_num'])
-        self.policy = Policy(len(self.action_set), 1, self.input_channels).to(self.device)
+        #self.action_set = get_action(config['action_set_num'])
+        self.policy = Policy().to(self.device)
         self.last_epoch, optim_params, self.running_reward = self.policy.load_checkpoint(config['params_path'])
         self.memory = ReplayMemory(self.memory_size)
         self.value_loss = nn.SmoothL1Loss()
@@ -44,25 +45,25 @@ class Trainer:
         return state
 
     def select_action(self, state):
-        probs, vs_t = self.policy(state)
-        # vs_t = return estimated for the current state
-
-        # We pick the action from a sample of the probabilities
-        # It prevents the model from picking always the same action
-        m = torch.distributions.Categorical(probs)
+        policy_output = self.policy(state)
+        alpha, beta = policy_output[0]
+        vs_t = policy_output[1]
+        
+        m = Beta(alpha, beta)
         action = m.sample()
+
         # We return the state in order to make sure that we operate with a valid tensor
-        return action, m.log_prob(action), vs_t, m.entropy(), state
+        return action.squeeze().cpu().numpy(), m.log_prob(action), vs_t, m.entropy(), state
 
     def run_episode(self, epoch, current_steps):
         state, ep_reward, steps = self.env.reset(), 0, 0
         for t in range(self.env.spec().max_episode_steps):  # Protecting from scenarios where you are mostly stopped
             with torch.no_grad():
                 state = self.prepare_state(state)
-                action_id, action_log_prob, vs_t, entropy, state = self.select_action(state)
-                next_state, reward, done, _ = self.env.step(self.action_set[action_id.item()])
+                action, action_log_prob, vs_t, entropy, state = self.select_action(state)
+                next_state, reward, done, _ = self.env.step(action * np.array([2., 1., 1.]) + np.array([-1., 0., 0.]))
                 # Store transition to memory
-                self.memory.push(state, action_id, action_log_prob, entropy, reward, vs_t, next_state)
+                self.memory.push(state, action, action_log_prob, entropy, reward, vs_t, next_state)
 
                 state = next_state
                 steps += 1

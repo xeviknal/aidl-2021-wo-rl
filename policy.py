@@ -6,7 +6,7 @@ from os import path
 
 class Policy(nn.Module):
 
-    def __init__(self, actor_output, critic_output, inputs=4):
+    def __init__(self, actor_output=3, critic_output=1, inputs=4):
         super(Policy, self).__init__()
         self.pipeline = nn.Sequential(
             nn.Conv2d(inputs, 12, kernel_size=3, stride=2, padding=1),  # [12, 48, 48]
@@ -26,7 +26,8 @@ class Policy(nn.Module):
         )
 
         # actor's layer
-        self.actor_head = nn.Linear(128, actor_output)
+        self.alpha_head = nn.Linear(128, actor_output)
+        self.beta_head = nn.Linear(128, actor_output)
 
         # critic's layer
         self.critic_head = nn.Linear(128, critic_output)
@@ -34,9 +35,10 @@ class Policy(nn.Module):
     def forward(self, x):
        
         x = self.pipeline(x)
-        # actor: choses action to take from state s_t 
-        # by returning probability of each action
-        action_prob = F.softmax(self.actor_head(x), dim=-1)
+        
+        # actor: does alpha and beta
+        alpha = F.softplus(self.alpha_head(x)) + 1
+        beta = F.softplus(self.beta_head(x)) + 1
 
         # critic: evaluates being in the state s_t
         state_values = self.critic_head(x)
@@ -44,7 +46,7 @@ class Policy(nn.Module):
         # return values for both actor and critic as a tuple of 2 values:
         # 1. a list with the probability of each action over the action space
         # 2. the value from state s_t 
-        return action_prob, state_values
+        return (alpha, beta), state_values
 
     def load_checkpoint(self, params_path):
         epoch = 0
