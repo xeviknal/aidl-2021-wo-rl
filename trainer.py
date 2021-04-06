@@ -63,6 +63,8 @@ class Trainer:
                 action, action_log_prob, vs_t, entropy, state = self.select_action(state)
                 next_state, reward, done, _ = self.env.step(action * np.array([2., 1., 1.]) + np.array([-1., 0., 0.]))
                 # Store transition to memory
+                # TODO: trash vars to remove
+                # action?
                 self.memory.push(state, action, action_log_prob, entropy, reward, vs_t, next_state)
 
                 state = next_state
@@ -99,11 +101,14 @@ class Trainer:
         batch = Transition(*zip(*transitions))
         state_batch = torch.cat(batch.state)
         old_log_prop_batch = torch.cat(batch.log_prob)
-        entropy_batch = torch.cat(batch.entropy).view(-1, 1)
+        # Entropy is reshaped to have 3 values per action
+        entropy_batch = torch.cat(batch.entropy).view(-1, 3)
         vst_batch = torch.cat(batch.vs_t)
 
         l_vf = self.c1 * self.value_loss(vst_batch, v_targ)
-        l_entropy = self.c2 * entropy_batch.sum()
+
+        # We calculate the mean of each distribution and sum the final 3 values
+        l_entropy = self.c2 * entropy_batch.mean(dim=0).sum()
 
         #  Computing clipped loss:
         _, new_log_prob_batch, _, _, _ = self.select_action(state_batch)

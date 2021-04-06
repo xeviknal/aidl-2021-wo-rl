@@ -36,7 +36,7 @@ class Policy(nn.Module):
        
         x = self.pipeline(x)
         
-        # actor: does alpha and beta
+        # actor: calculates alpha and beta values
         alpha = F.softplus(self.alpha_head(x)) + 1
         beta = F.softplus(self.beta_head(x)) + 1
 
@@ -44,7 +44,7 @@ class Policy(nn.Module):
         state_values = self.critic_head(x)
 
         # return values for both actor and critic as a tuple of 2 values:
-        # 1. a list with the probability of each action over the action space
+        # 1. a tuple with both alpha and beta
         # 2. the value from state s_t 
         return (alpha, beta), state_values
 
