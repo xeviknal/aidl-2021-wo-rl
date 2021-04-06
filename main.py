@@ -23,12 +23,12 @@ if __name__ == "__main__":
         'c2': 0.01,  # Entropy coeff
         'lr': 1e-3,  # Learning rate
         'gamma': 0.99,  # Discount rate
-        'log_interval': 10,  # controls how often we log progress
+        'log_interval': 5,  # controls how often we log progress
         'stack_frames': 4,
         'device': device,
         'experiment':experiment,
         'params_path': f'./params/policy-params-{experiment}.dl',
-        'action_set_num': 4,
+        'action_set_num': 0,
         'train': True
     }
 
