@@ -102,7 +102,7 @@ class Trainer:
         vst_batch = torch.cat(batch.vs_t)
 
         l_vf = self.c1 * self.value_loss(vst_batch, v_targ)
-        l_entropy = self.c2 * entropy_batch.sum()
+        l_entropy = self.c2 * entropy_batch.mean()
 
         #  Computing clipped loss:
         _, new_log_prob_batch, _, _, _ = self.select_action(state_batch)
