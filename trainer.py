@@ -22,17 +22,18 @@ class Trainer:
         self.ppo_epochs = config['num_ppo_epochs']
         self.mini_batch = config['mini_batch_size']
         self.memory_size = config['memory_size']
+        self.experiment = config['experiment']
         self.c1, self.c2, self.eps = config['c1'], config['c2'], config['eps']
-        self.writer = SummaryWriter(flush_secs=5)
+        self.writer = SummaryWriter(log_dir=f'runs/{config["experiment"]}', flush_secs=5)
         self.action_set = get_action(config['action_set_num'])
         self.policy = Policy(len(self.action_set), 1, self.input_channels).to(self.device)
         self.last_epoch, optim_params, self.running_reward = self.policy.load_checkpoint(config['params_path'])
         self.memory = ReplayMemory(self.memory_size)
         self.value_loss = nn.SmoothL1Loss()
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
-        self.experiment = config['experiment']
         if optim_params is not None:
             self.optimizer.load_state_dict(optim_params)
+        self.scheduler = torch.optim.lr_scheduler.OneCycleLR(self.optimizer, max_lr=0.01, steps_per_epoch=self.memory_size, epochs=self.epochs)
 
     def prepare_state(self, state):
         if state is None:  # First state is always None
