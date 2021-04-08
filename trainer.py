@@ -73,7 +73,7 @@ class Trainer:
 
         # Update running reward
         if done:
-            self.running_reward = 0.05 * ep_reward + (1 - 0.05) * self.running_reward
+            self.running_reward = 0.01 * ep_reward + (1 - 0.01) * self.running_reward
 
         self.logging_episode(epoch, ep_reward, self.running_reward)
         return steps
