@@ -5,7 +5,7 @@ from gym.wrappers import FrameStack, GrayScaleObservation, Monitor
 
 class CarRacingEnv:
 
-    def __init__(self, device, stack_frames=4, train=False):
+    def __init__(self, device, seed, stack_frames=4, train=False):
         super().__init__()
         self.total_rew = 0
         self.state = None
@@ -14,6 +14,7 @@ class CarRacingEnv:
         self.train = train
 
         self.env = gym.make("CarRacing-v0")
+        self.env.seed(seed)
         if not train:
             self.env = Monitor(self.env, './video', force=True)
         self.env = GrayScaleObservation(self.env)
