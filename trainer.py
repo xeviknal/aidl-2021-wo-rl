@@ -80,16 +80,15 @@ class Trainer:
 
     def compute_advantages(self):
         batch = Transition(*zip(*self.memory.memory))
-        vst_batch = torch.cat(batch.vs_t).to(self.device)
+        s = torch.cat(batch.state).to(self.device)
         reward_batch = torch.FloatTensor(batch.reward).view(-1, 1).to(self.device)
         next_state_batch = torch.from_numpy(np.asarray(batch.next_state)).float().unsqueeze(0).view(len(self.memory), self.input_channels, 96, 96).to(self.device)
 
         with torch.no_grad():
             # Computing expected future return for t+1 step: Gt+1
-            _, v_t1 = self.policy(next_state_batch)
-            v_targ = reward_batch + self.gamma * v_t1
+            v_targ = reward_batch + self.gamma * self.policy(next_state_batch)[1]
             # Computing advantage
-            adv = v_targ - vst_batch
+            adv = v_targ - self.policy(s)[1]
 
         return v_targ, adv
 
