@@ -92,10 +92,16 @@ class Trainer:
 
         return v_targ, adv
 
+    def get_new_prob_of(self, action, state):
+        probs, _ = self.policy(state)
+        m = torch.distributions.Categorical(probs)
+        return m.log_prob(action)
+
     def policy_update(self, transitions, v_targ, adv, iteration):
         # Get transitions values
         batch = Transition(*zip(*transitions))
         state_batch = torch.cat(batch.state)
+        action_batch = torch.cat(batch.action)
         old_log_prop_batch = torch.cat(batch.log_prob)
         entropy_batch = torch.cat(batch.entropy).view(-1, 1)
         vst_batch = torch.cat(batch.vs_t)
@@ -104,7 +110,7 @@ class Trainer:
         l_entropy = self.c2 * entropy_batch.mean()
 
         #  Computing clipped loss:
-        _, new_log_prob_batch, _, _, _ = self.select_action(state_batch)
+        new_log_prob_batch = self.get_new_prob_of(action_batch, state_batch)
 
         # For performance reasons. rt = exp(new_log_prob) / exp(old_log_prop)
         rt = torch.exp(new_log_prob_batch - old_log_prop_batch)
