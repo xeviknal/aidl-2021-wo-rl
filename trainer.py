@@ -22,6 +22,7 @@ class Trainer:
         self.ppo_epochs = config['num_ppo_epochs']
         self.mini_batch = config['mini_batch_size']
         self.memory_size = config['memory_size']
+        self.experiment = config['experiment']
         self.c1, self.c2, self.eps = config['c1'], config['c2'], config['eps']
         self.writer = SummaryWriter(flush_secs=5)
         self.action_set = get_action(config['action_set_num'])
@@ -30,7 +31,6 @@ class Trainer:
         self.memory = ReplayMemory(self.memory_size)
         self.value_loss = nn.SmoothL1Loss()
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
-        self.experiment = config['experiment']
         if optim_params is not None:
             self.optimizer.load_state_dict(optim_params)
 
@@ -58,6 +58,7 @@ class Trainer:
         state, ep_reward, steps = self.env.reset(), 0, 0
         for t in range(self.env.spec().max_episode_steps):  # Protecting from scenarios where you are mostly stopped
             with torch.no_grad():
+                self.env.render()
                 state = self.prepare_state(state)
                 action_id, action_log_prob, vs_t, entropy, state = self.select_action(state)
                 next_state, reward, done, _ = self.env.step(self.action_set[action_id.item()])
@@ -76,6 +77,7 @@ class Trainer:
             self.running_reward = 0.01 * ep_reward + (1 - 0.01) * self.running_reward
 
         self.logging_episode(epoch, ep_reward, self.running_reward)
+        print(f'Ep Reward: {ep_reward}, Ep Steps: {steps}')
         return steps
 
     def compute_advantages(self):
@@ -155,6 +157,7 @@ class Trainer:
             v_targ, adv = self.compute_advantages()
 
             # Train the model num_epochs time with mini-batch strategy
+            print(f'Updating iteration #{epoch}')
             for ppo_epoch in range(self.ppo_epochs):
                 # Train the model with batch-size transitions
                 for index in BatchSampler(SubsetRandomSampler(range(self.memory_size)), self.mini_batch, False):
