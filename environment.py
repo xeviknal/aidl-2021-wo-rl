@@ -1,6 +1,7 @@
 import gym
 from wrappers.frame_skipper import FrameSkipper
 from wrappers.early_stop import EarlyStop
+from wrappers.green_penalty import GreenPenalty
 from gym.wrappers import FrameStack, GrayScaleObservation, Monitor
 
 
@@ -18,6 +19,7 @@ class CarRacingEnv:
         self.env.seed(seed)
         if not train:
             self.env = Monitor(self.env, './video', force=True)
+        self.env = GreenPenalty(self.env)
         self.env = GrayScaleObservation(self.env)
         self.env = FrameStack(self.env, stack_frames)
         self.env = FrameSkipper(self.env, 4)
