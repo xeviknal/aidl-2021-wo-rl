@@ -101,7 +101,6 @@ class Trainer:
         return m.log_prob(action)
 
     def policy_update(self, transitions, v_targ, adv, iteration):
-        print(f'Updating iteration #{iteration}')
         # Get transitions values
         batch = Transition(*zip(*transitions))
         state_batch = torch.cat(batch.state)
@@ -159,6 +158,7 @@ class Trainer:
             v_targ, adv = self.compute_advantages()
 
             # Train the model num_epochs time with mini-batch strategy
+            print(f'Updating iteration #{epoch}')
             for ppo_epoch in range(self.ppo_epochs):
                 # Train the model with batch-size transitions
                 for index in BatchSampler(SubsetRandomSampler(range(self.memory_size)), self.mini_batch, False):
