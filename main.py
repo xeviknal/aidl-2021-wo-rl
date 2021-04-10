@@ -14,7 +14,7 @@ if __name__ == "__main__":
     hyperparams = {
         'num_episodes': 200000,  # Number of training episodes
         'lr': 1e-3,  # Learning rate
-        'gamma': 0.99,  # Discount rate
+        'gamma': 0.9,  # Discount rate
         'log_interval': 10,  # controls how often we log progress
         'stack_frames': 4,
         'device': device,
