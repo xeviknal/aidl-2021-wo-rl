@@ -63,7 +63,6 @@ class Trainer:
                 state = self.prepare_state(state)
                 action_id, action_log_prob, vs_t, entropy, state = self.select_action(state)
                 next_state, reward, done, _ = self.env.step(self.action_set[action_id.item()])
-                print(f'Reward: {reward}')
                 # Store transition to memory
                 self.memory.push(state, action_id, action_log_prob, entropy, reward, vs_t, next_state)
 
@@ -79,7 +78,7 @@ class Trainer:
             self.running_reward = 0.01 * ep_reward + (1 - 0.01) * self.running_reward
 
         self.logging_episode(epoch, ep_reward, self.running_reward)
-        print(f'Steps: {steps}')
+        print(f'Ep Reward: {ep_reward}, Ep Steps: {steps}')
         return steps
 
     def compute_advantages(self):
