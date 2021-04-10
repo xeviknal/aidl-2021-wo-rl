@@ -24,7 +24,7 @@ class Trainer:
         self.memory_size = config['memory_size']
         self.experiment = config['experiment']
         self.c1, self.c2, self.eps = config['c1'], config['c2'], config['eps']
-        self.writer = SummaryWriter(log_dir=f'runs/{config["experiment"]}', flush_secs=5)
+        self.writer = SummaryWriter(flush_secs=5)
         self.action_set = get_action(config['action_set_num'])
         self.policy = Policy(len(self.action_set), 1, self.input_channels).to(self.device)
         self.last_epoch, optim_params, self.running_reward = self.policy.load_checkpoint(config['params_path'])
