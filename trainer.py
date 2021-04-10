@@ -33,7 +33,6 @@ class Trainer:
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
         if optim_params is not None:
             self.optimizer.load_state_dict(optim_params)
-        self.scheduler = torch.optim.lr_scheduler.OneCycleLR(self.optimizer, max_lr=0.01, steps_per_epoch=self.memory_size, epochs=self.epochs)
 
     def prepare_state(self, state):
         if state is None:  # First state is always None
