@@ -52,7 +52,6 @@ class Trainer:
         # It prevents the model from picking always the same action
         m = torch.distributions.Categorical(probs)
         action = m.sample()
-        print(f'Action: {action.item()}')
         # We return the state in order to make sure that we operate with a valid tensor
         return action, m.log_prob(action), vs_t, m.entropy(), state
 
@@ -80,6 +79,7 @@ class Trainer:
             self.running_reward = 0.01 * ep_reward + (1 - 0.01) * self.running_reward
 
         self.logging_episode(epoch, ep_reward, self.running_reward)
+        print(f'Steps: {steps}')
         return steps
 
     def compute_advantages(self):
