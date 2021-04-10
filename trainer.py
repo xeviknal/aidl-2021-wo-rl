@@ -52,6 +52,7 @@ class Trainer:
         # It prevents the model from picking always the same action
         m = torch.distributions.Categorical(probs)
         action = m.sample()
+        print(f'Action: {action.item()}')
         # We return the state in order to make sure that we operate with a valid tensor
         return action, m.log_prob(action), vs_t, m.entropy(), state
 
@@ -59,9 +60,11 @@ class Trainer:
         state, ep_reward, steps = self.env.reset(), 0, 0
         for t in range(self.env.spec().max_episode_steps):  # Protecting from scenarios where you are mostly stopped
             with torch.no_grad():
+                self.env.render()
                 state = self.prepare_state(state)
                 action_id, action_log_prob, vs_t, entropy, state = self.select_action(state)
                 next_state, reward, done, _ = self.env.step(self.action_set[action_id.item()])
+                print(f'Reward: {reward}')
                 # Store transition to memory
                 self.memory.push(state, action_id, action_log_prob, entropy, reward, vs_t, next_state)
 
@@ -99,6 +102,7 @@ class Trainer:
         return m.log_prob(action)
 
     def policy_update(self, transitions, v_targ, adv, iteration):
+        print(f'Updating iteration #{iteration}')
         # Get transitions values
         batch = Transition(*zip(*transitions))
         state_batch = torch.cat(batch.state)

@@ -10,7 +10,7 @@ from trainer import Trainer
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 #for concurrent runs and logging
-experiment='ppo-nm-scheduler'
+experiment='ppo-nm-scheduler-early-stop'
 if __name__ == "__main__":
     hyperparams = {
         'num_epochs': 25000,  # Number of training episodes

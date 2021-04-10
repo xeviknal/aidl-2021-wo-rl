@@ -22,7 +22,6 @@ class EarlyStop(Wrapper):
         avg = 1
         if self.remaining_steps == 0:
             avg = np.array(self.latest_rewards).mean()
-            if avg > 0:
-                self.remaining_steps = self.steps
-                self.latest_rewards = []
+            self.remaining_steps = self.steps
+            self.latest_rewards = []
         return state, reward, avg < 0, info
