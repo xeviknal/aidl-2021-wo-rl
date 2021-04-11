@@ -11,7 +11,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 if __name__ == "__main__":
     hyperparams = {
-        'num_episodes': 150000,  # Number of training episodes
+        'num_episodes': 20000,  # Number of training episodes
         'lr': 1e-5,  # Learning rate
         'gamma': 0.99,  # Discount rate
         'log_interval': 10,  # controls how often we log progress
@@ -22,7 +22,7 @@ if __name__ == "__main__":
     }
 
     # Reproducibility: manual seeding
-    seed = 7081960  # Yann LeCun birthday
+    seed = 1000
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     np.random.seed(seed)
