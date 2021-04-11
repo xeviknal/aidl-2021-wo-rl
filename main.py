@@ -9,6 +9,9 @@ from trainer import Trainer
 # if gpu is to be used
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+#for concurrent runs and logging
+experiment='reinforce-final-2'
+
 if __name__ == "__main__":
     hyperparams = {
         'num_episodes': 20000,  # Number of training episodes
@@ -17,7 +20,8 @@ if __name__ == "__main__":
         'log_interval': 10,  # controls how often we log progress
         'stack_frames': 4,
         'device': device,
-        'params_path': './params/policy-params.dl',
+        'experiment':experiment,
+        'params_path': f'./params/policy-params-{experiment}.dl',
         'train': True
     }
 
