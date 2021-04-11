@@ -22,7 +22,7 @@ if __name__ == "__main__":
     }
 
     # Reproducibility: manual seeding
-    seed = 1000
+    seed = 190421
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     np.random.seed(seed)
