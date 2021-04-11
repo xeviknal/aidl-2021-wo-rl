@@ -10,7 +10,7 @@ from trainer import Trainer
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 #for concurrent runs and logging
-experiment='reinforce-final-2'
+experiment='reinforce-final-3'
 
 if __name__ == "__main__":
     hyperparams = {
