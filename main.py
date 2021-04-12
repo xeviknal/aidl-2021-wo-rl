@@ -1,5 +1,5 @@
 import torch
-
+import numpy as np
 import helpers
 from environment import CarRacingEnv
 from trainer import Trainer
@@ -22,6 +22,12 @@ if __name__ == "__main__":
         'action_set_num': 0,
         'train': True
     }
+
+   # Reproducibility: manual seeding
+    seed = 1000
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    np.random.seed(seed)
 
     #make sure that params folder exists
     helpers.create_directory('params')
