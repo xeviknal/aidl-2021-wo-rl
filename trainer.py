@@ -33,11 +33,7 @@ class Trainer:
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
         if optim_params is not None:
             self.optimizer.load_state_dict(optim_params)
-        self.scheduler = torch.optim.lr_scheduler.OneCycleLR(self.optimizer, max_lr=0.01, steps_per_epoch=self.memory_size * self.ppo_epochs, epochs=self.epochs)
-        self.writer.add_hparams(config)
-        self.writer.add_graph(self.policy.pipeline)
-        self.writer.add_graph(self.policy.actor_head)
-        self.writer.add_graph(self.policy.critic_head)
+        self.scheduler = torch.optim.lr_scheduler.OneCycleLR(self.optimizer, max_lr=0.001, steps_per_epoch=self.memory_size * self.ppo_epochs, epochs=self.epochs)
 
     def prepare_state(self, state):
         if state is None:  # First state is always None
@@ -139,6 +135,7 @@ class Trainer:
         self.writer.add_scalar(f'{self.experiment}/vf', l_vf.item(), iteration)
         loss.backward()
         self.optimizer.step()
+        self.scheduler.step()
 
     def logging_episode(self, i_episode, ep_reward, running_reward):
         self.writer.add_scalar(f'{self.experiment}/reward', ep_reward, i_episode)
@@ -169,7 +166,6 @@ class Trainer:
                     self.policy_update(self.memory[index], v_targ[index], adv[index], global_step)
                     global_step += 1
 
-            self.optimizer.step()
             # Saving each log interval, at the end of the episodes or when training is complete
             # TODO: catch keyboard interrupt
             if epoch % self.config['log_interval'] == 0 or epoch == self.epochs \
