@@ -139,6 +139,7 @@ class Trainer:
         self.writer.add_scalar(f'{self.experiment}/vf', l_vf.item(), iteration)
         loss.backward()
         self.optimizer.step()
+        self.scheduler.step()
 
     def logging_episode(self, i_episode, ep_reward, running_reward):
         self.writer.add_scalar(f'{self.experiment}/reward', ep_reward, i_episode)
@@ -169,7 +170,6 @@ class Trainer:
                     self.policy_update(self.memory[index], v_targ[index], adv[index], global_step)
                     global_step += 1
 
-            self.optimizer.step()
             # Saving each log interval, at the end of the episodes or when training is complete
             # TODO: catch keyboard interrupt
             if epoch % self.config['log_interval'] == 0 or epoch == self.epochs \
