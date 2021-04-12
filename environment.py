@@ -24,7 +24,6 @@ class CarRacingEnv:
         self.env = FrameStack(self.env, stack_frames)
         self.env = FrameSkipper(self.env, 4)
         self.env = EarlyStop(self.env, 50)
-        print(self.env.observation_space)
 
     def max_episode_steps(self):
         return self.spec().max_episode_steps
