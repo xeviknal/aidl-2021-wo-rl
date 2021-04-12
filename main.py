@@ -10,22 +10,22 @@ from trainer import Trainer
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 #for concurrent runs and logging
-experiment='ppo-nm-es-gp-sched-exp1'
+experiment='ppo-nm-es-gp-sched-exp2'
 if __name__ == "__main__":
     hyperparams = {
         'num_epochs': 25000,  # Number of training episodes
-        'num_ppo_epochs': 4,
-        'mini_batch_size': 128,
+        'num_ppo_epochs': 5,
+        'mini_batch_size': 200,
         'memory_size': 2000,
         'eps': 0.2,
-        'c1': 2.,  # Value Function coeff
+        'c1': 0.6,  # Value Function coeff
         'c2': 0.05,  # Entropy coeff
         'lr': 1e-3,  # Learning rate
         'gamma': 0.99,  # Discount rate
         'log_interval': 10,  # controls how often we log progress
         'stack_frames': 4,
         'device': device,
-        'experiment':experiment,
+        'experiment': experiment,
         'params_path': f'./params/policy-params-{experiment}.dl',
         'action_set_num': 4,
         'train': True
