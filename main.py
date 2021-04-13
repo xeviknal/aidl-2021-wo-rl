@@ -58,5 +58,6 @@ analysis = tune.run(
     metric='running_reward',
     mode='min',
     num_samples=10,
+    resources_per_trial={"gpu": 1},
     config=hyperparams,
 )

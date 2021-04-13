@@ -8,3 +8,4 @@ torchvision
 opencv-python
 tensorboard
 ray==1.0.1.post1
+ray[tune]
