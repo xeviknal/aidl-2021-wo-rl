@@ -19,7 +19,7 @@ def train(config):
     torch.cuda.manual_seed(seed)
     np.random.seed(seed)
 
-    config['params_path'] = f'./params/policy-params-{experiment}-{int(time.time())}.dl',
+    config['params_path'] = f'./params/policy-params-{experiment}-{int(time.time())}.dl'
 
     # make sure that params folder exists
     helpers.create_directory('params')
