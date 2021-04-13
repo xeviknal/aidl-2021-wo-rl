@@ -27,7 +27,7 @@ if __name__ == "__main__":
     }
 
     # Reproducibility: manual seeding
-    seed = 7081960  # Yann LeCun birthday
+    seed = 190421  # Yann LeCun birthday
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     np.random.seed(seed)
