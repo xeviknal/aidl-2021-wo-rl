@@ -49,7 +49,7 @@ if __name__ == "__main__":
         'device': device,
         'experiment': experiment,
         'params_path': f'./params/policy-params-{experiment}.dl',
-        'action_set_num': 0,
+        'action_set_num': 4,
         'train': True,
     }
 

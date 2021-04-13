@@ -15,6 +15,7 @@ class Trainer:
         super().__init__()
         self.env = env
         self.config = config
+        self.experiment = config['experiment']
         self.gamma = config['gamma']
         self.input_channels = config['stack_frames']
         self.device = config['device']
@@ -23,14 +24,13 @@ class Trainer:
         self.mini_batch = config['mini_batch_size']
         self.memory_size = config['memory_size']
         self.c1, self.c2, self.eps = config['c1'], config['c2'], config['eps']
-        self.writer = SummaryWriter(flush_secs=5)
+        self.writer = SummaryWriter(flush_secs=5, log_dir=f'runs/{self.experiment}')
         self.action_set = get_action(config['action_set_num'])
         self.policy = Policy(len(self.action_set), 1, self.input_channels).to(self.device)
         self.last_epoch, optim_params, self.running_reward = self.policy.load_checkpoint(config['params_path'])
         self.memory = ReplayMemory(self.memory_size)
         self.value_loss = nn.SmoothL1Loss()
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
-        self.experiment = config['experiment']
         if optim_params is not None:
             self.optimizer.load_state_dict(optim_params)
 
@@ -125,17 +125,17 @@ class Trainer:
         loss = -l_clip + l_vf - l_entropy
 
         self.optimizer.zero_grad()
-        self.writer.add_scalar(f'{self.experiment}/loss', loss.item(), iteration)
-        self.writer.add_scalar(f'{self.experiment}/entropy', l_entropy.item(), iteration)
-        self.writer.add_scalar(f'{self.experiment}/ratio', rt.mean().item(), iteration)
-        self.writer.add_scalar(f'{self.experiment}/advantage', adv.mean().item(), iteration)
-        self.writer.add_scalar(f'{self.experiment}/vf', l_vf.item(), iteration)
+        self.writer.add_scalar(f'loss', loss.item(), iteration)
+        self.writer.add_scalar(f'entropy', l_entropy.item(), iteration)
+        self.writer.add_scalar(f'ratio', rt.mean().item(), iteration)
+        self.writer.add_scalar(f'advantage', adv.mean().item(), iteration)
+        self.writer.add_scalar(f'vf', l_vf.item(), iteration)
         loss.backward()
         self.optimizer.step()
 
     def logging_episode(self, i_episode, ep_reward, running_reward):
-        self.writer.add_scalar(f'{self.experiment}/reward', ep_reward, i_episode)
-        self.writer.add_scalar(f'{self.experiment}/running reward', running_reward, i_episode)
+        self.writer.add_scalar(f'reward', ep_reward, i_episode)
+        self.writer.add_scalar(f'running reward', running_reward, i_episode)
 
     def train(self):
         # Training loop
