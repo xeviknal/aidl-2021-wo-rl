@@ -24,6 +24,7 @@ class Trainer:
         self.policy = Policy(len(self.action_set), 1, self.input_channels).to(self.device)
         self.last_epoch, optim_params, self.running_reward = self.policy.load_checkpoint(config['params_path'])
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
+        self.experiment = config['experiment']
         if optim_params is not None:
             self.optimizer.load_state_dict(optim_params)
 
@@ -69,7 +70,7 @@ class Trainer:
         # Update policy:
         self.optimizer.zero_grad()
         policy_loss = torch.stack(policy_loss).sum() + torch.stack(value_losses).sum()
-        self.writer.add_scalar('loss', policy_loss.item(), iteration)
+        self.writer.add_scalar(f'{self.experiment}/loss', policy_loss.item(), iteration)
         policy_loss.backward()
         self.optimizer.step()
         del self.policy.rewards[:]
@@ -99,9 +100,9 @@ class Trainer:
             self.running_reward = 0.05 * ep_reward + (1 - 0.05) * self.running_reward
 
             # Plotting
-            self.writer.add_scalar('reward', ep_reward, i_episode)
-            self.writer.add_scalar('running reward', self.running_reward, i_episode)
-            self.writer.add_scalar('mean entropy', np.mean(self.policy.entropies), i_episode)
+            self.writer.add_scalar(f'{self.experiment}/reward', ep_reward, i_episode)
+            self.writer.add_scalar(f'{self.experiment}/running reward', self.running_reward, i_episode)
+            self.writer.add_scalar(f'{self.experiment}/mean entropy', np.mean(self.policy.entropies), i_episode)
 
             # Perform training step
             self.episode_train(i_episode)

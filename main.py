@@ -9,15 +9,19 @@ from trainer import Trainer
 # if gpu is to be used
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+#for concurrent runs and logging
+experiment='rl-baseline-final-1'
+
 if __name__ == "__main__":
     hyperparams = {
-        'num_episodes': 200000,  # Number of training episodes
+        'num_episodes': 20000,  # Number of training episodes
         'lr': 1e-3,  # Learning rate
         'gamma': 0.99,  # Discount rate
         'log_interval': 10,  # controls how often we log progress
         'stack_frames': 4,
         'device': device,
-        'params_path': './params/policy-params.dl',
+        'experiment':experiment,
+        'params_path': f'./params/policy-params-{experiment}.dl',
         'action_set_num': 0,
         'train': True
     }
