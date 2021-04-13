@@ -1,3 +1,4 @@
+import time
 import torch
 import numpy as np
 from ray import tune
@@ -17,6 +18,8 @@ def train(config):
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     np.random.seed(seed)
+
+    config['params_path'] = f'./params/policy-params-{experiment}-{int(time.time())}.dl',
 
     # make sure that params folder exists
     helpers.create_directory('params')
@@ -48,7 +51,6 @@ if __name__ == "__main__":
         'stack_frames': 4,
         'device': device,
         'experiment': experiment,
-        'params_path': f'./params/policy-params-{experiment}.dl',
         'action_set_num': 4,
         'train': True,
     }
