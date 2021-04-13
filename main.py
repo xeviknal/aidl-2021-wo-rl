@@ -38,7 +38,7 @@ def train(config):
 experiment = 'ppo-nm-hp-tuning'
 if __name__ == "__main__":
     hyperparams = {
-        'num_epochs': 1000,  # Number of training episodes
+        'num_epochs': 2000,  # Number of training episodes
         'num_ppo_epochs': 6,
         'mini_batch_size': 128,
         'memory_size': 2000,
