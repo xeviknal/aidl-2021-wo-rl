@@ -39,7 +39,7 @@ def train(config):
 experiment = 'ppo-nm-hp-tuning'
 if __name__ == "__main__":
     hyperparams = {
-        'num_epochs': 700,  # Number of training episodes
+        'num_epochs': 2000,  # Number of training episodes
         'num_ppo_epochs': tune.randint(4, 10),
         'mini_batch_size': 128,
         'memory_size': 2000,
@@ -58,9 +58,9 @@ if __name__ == "__main__":
 
 analysis = tune.run(
     train,
-    metric='running_reward',
-    mode='min',
-    num_samples=20,
-    resources_per_trial={"cpu": 0.5, "gpu": 0.3},
+    metric='running reward',
+    mode='max',
+    num_samples=15,
+    resources_per_trial={"cpu": 0.4, "gpu": 0.3},
     config=hyperparams,
 )
