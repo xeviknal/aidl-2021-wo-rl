@@ -1,3 +1,4 @@
+from ray import tune
 import numpy as np
 import torch
 import torch.nn as nn
@@ -136,6 +137,7 @@ class Trainer:
     def logging_episode(self, i_episode, ep_reward, running_reward):
         self.writer.add_scalar(f'reward', ep_reward, i_episode)
         self.writer.add_scalar(f'running reward', running_reward, i_episode)
+        tune.report(iterations=i_episode, running_reward=running_reward)
 
     def train(self):
         # Training loop
