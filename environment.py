@@ -1,5 +1,6 @@
 import gym
 from wrappers.frame_skipper import FrameSkipper
+from wrappers.early_stop import EarlyStop
 from gym.wrappers import FrameStack, GrayScaleObservation, Monitor
 
 
@@ -20,6 +21,8 @@ class CarRacingEnv:
         self.env = GrayScaleObservation(self.env)
         self.env = FrameStack(self.env, stack_frames)
         self.env = FrameSkipper(self.env, 4)
+        self.env = EarlyStop(self.env, 50)
+
         print(self.env.observation_space)
 
     def max_episode_steps(self):
