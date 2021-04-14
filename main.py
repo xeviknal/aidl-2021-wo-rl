@@ -31,8 +31,10 @@ def train(config):
     trainer.train()
 
     # Let's store a vid with one episode
+    config['train'] = False
     runner = Runner(env, config)
     runner.run()
+    config['train'] = True
 
 
 # for concurrent runs and logging
@@ -58,7 +60,7 @@ if __name__ == "__main__":
 
 analysis = tune.run(
     train,
-    metric='running reward',
+    metric='running_reward',
     mode='max',
     num_samples=15,
     resources_per_trial={"cpu": 0.4, "gpu": 0.3},
