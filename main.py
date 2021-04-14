@@ -26,12 +26,13 @@ def train(config):
 
     env = CarRacingEnv(device, seed, config['stack_frames'], config['train'])
     helpers.display_start()
-    if config['train']:
-        trainer = Trainer(env, config)
-        trainer.train()
-    else:
-        runner = Runner(env, config)
-        runner.run()
+    # Train it first
+    trainer = Trainer(env, config)
+    trainer.train()
+
+    # Let's store a vid with one episode
+    runner = Runner(env, config)
+    runner.run()
 
 
 # for concurrent runs and logging
@@ -59,7 +60,7 @@ analysis = tune.run(
     train,
     metric='running_reward',
     mode='min',
-    num_samples=10,
+    num_samples=20,
     resources_per_trial={"cpu": 0.5, "gpu": 0.3},
     config=hyperparams,
 )
