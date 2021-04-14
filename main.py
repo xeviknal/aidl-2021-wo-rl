@@ -38,7 +38,7 @@ def train(config):
 
 
 # for concurrent runs and logging
-experiment = 'ppo-nm-hp-tuning'
+experiment = 'ppo-nm-hp-tuning-2'
 if __name__ == "__main__":
     hyperparams = {
         'num_epochs': 2000,  # Number of training episodes
