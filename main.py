@@ -41,7 +41,7 @@ def train(config):
 experiment = 'ppo-nm-hp-tuning'
 if __name__ == "__main__":
     hyperparams = {
-        'num_epochs': 700,  # Number of training episodes
+        'num_epochs': 1500,  # Number of training episodes
         'num_ppo_epochs': tune.randint(4, 10),
         'mini_batch_size': 128,
         'memory_size': 2000,
@@ -66,3 +66,9 @@ analysis = tune.run(
     resources_per_trial={"cpu": 0.4, "gpu": 0.3},
     config=hyperparams,
 )
+
+print("Best config: ", analysis.get_best_config(
+    metric="running_reward", mode="max"))
+
+# Get a dataframe for analyzing trial results.
+df = analysis.results_df
