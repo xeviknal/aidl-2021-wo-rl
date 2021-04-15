@@ -23,7 +23,7 @@ class CarRacingEnv:
         self.env = GrayScaleObservation(self.env)
         self.env = FrameStack(self.env, stack_frames)
         self.env = FrameSkipper(self.env, 4)
-        self.env = EarlyStop(self.env, 50)
+        self.env = EarlyStop(self.env, 100)
 
         print(self.env.observation_space)
 
