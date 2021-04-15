@@ -45,7 +45,7 @@ if __name__ == "__main__":
         'num_ppo_epochs': tune.randint(4, 10),
         'mini_batch_size': 128,
         'memory_size': 2000,
-        'eps': 0.2,
+        'eps': tune.quniform(0.1, 0.2, 0.1),
         'c1': tune.quniform(0.5, 2.5, 0.25),  # Value Function coeff
         'c2': tune.quniform(0.01, 0.15, 0.01),  # Entropy coeff
         'lr': 1e-3,  # Learning rate
