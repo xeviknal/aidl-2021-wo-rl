@@ -9,10 +9,17 @@ from trainers.ppo_trainer import PPOTrainer
 # if gpu is to be used
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-#for concurrent runs and logging
-experiment='ppo-nm'
+experiment = 'dev'
 if __name__ == "__main__":
     hyperparams = {
+        # Run management params
+        'experiment': experiment,
+        'params_path': f'./params/policy-params-{experiment}.dl',
+        'runs_path': f'./runs/{experiment}',
+        'log_interval': 10,  # controls how often we log progress
+        'device': device,
+        'train': True,
+        # Train management
         'num_epochs': 25000,  # Number of training episodes
         'num_ppo_epochs': 10,
         'mini_batch_size': 128,
@@ -22,13 +29,8 @@ if __name__ == "__main__":
         'c2': 0.01,  # Entropy coeff
         'lr': 1e-3,  # Learning rate
         'gamma': 0.99,  # Discount rate
-        'log_interval': 10,  # controls how often we log progress
         'stack_frames': 4,
-        'device': device,
-        'experiment':experiment,
-        'params_path': f'./params/policy-params-{experiment}.dl',
         'action_set_num': 0,
-        'train': True
     }
 
     # Reproducibility: manual seeding

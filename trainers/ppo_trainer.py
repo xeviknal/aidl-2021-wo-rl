@@ -23,7 +23,7 @@ class PPOTrainer:
         self.mini_batch = config['mini_batch_size']
         self.memory_size = config['memory_size']
         self.c1, self.c2, self.eps = config['c1'], config['c2'], config['eps']
-        self.writer = SummaryWriter(flush_secs=5)
+        self.writer = SummaryWriter(flush_secs=5, log_dir=config['runs_path'])
         self.action_set = get_action(config['action_set_num'])
         self.policy = ActorCriticPolicy(len(self.action_set), 1, self.input_channels).to(self.device)
         self.last_epoch, optim_params, self.running_reward = self.policy.load_checkpoint(config['params_path'])
@@ -125,17 +125,17 @@ class PPOTrainer:
         loss = -l_clip + l_vf - l_entropy
 
         self.optimizer.zero_grad()
-        self.writer.add_scalar(f'{self.experiment}/loss', loss.item(), iteration)
-        self.writer.add_scalar(f'{self.experiment}/entropy', l_entropy.item(), iteration)
-        self.writer.add_scalar(f'{self.experiment}/ratio', rt.mean().item(), iteration)
-        self.writer.add_scalar(f'{self.experiment}/advantage', adv.mean().item(), iteration)
-        self.writer.add_scalar(f'{self.experiment}/vf', l_vf.item(), iteration)
+        self.writer.add_scalar('loss', loss.item(), iteration)
+        self.writer.add_scalar('entropy', l_entropy.item(), iteration)
+        self.writer.add_scalar('ratio', rt.mean().item(), iteration)
+        self.writer.add_scalar('advantage', adv.mean().item(), iteration)
+        self.writer.add_scalar('vf', l_vf.item(), iteration)
         loss.backward()
         self.optimizer.step()
 
     def logging_episode(self, i_episode, ep_reward, running_reward):
-        self.writer.add_scalar(f'{self.experiment}/reward', ep_reward, i_episode)
-        self.writer.add_scalar(f'{self.experiment}/running reward', running_reward, i_episode)
+        self.writer.add_scalar('reward', ep_reward, i_episode)
+        self.writer.add_scalar('running reward', running_reward, i_episode)
 
     def train(self):
         # Training loop
