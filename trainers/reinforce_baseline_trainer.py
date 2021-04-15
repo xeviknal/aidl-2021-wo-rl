@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from collections import namedtuple
 
 
-from policies.reinforce_baseline_policy import ReinforceBaselinePolicy
+from policies.actor_critic_policy import ActorCriticPolicy
 from actions import get_action
 
 
@@ -21,7 +21,7 @@ class ReinforceBaselineTrainer:
         self.device = config['device']
         self.writer = SummaryWriter(flush_secs=5)
         self.action_set = get_action(config['action_set_num'])
-        self.policy = ReinforceBaselinePolicy(len(self.action_set), 1, self.input_channels).to(self.device)
+        self.policy = ActorCriticPolicy(len(self.action_set), 1, self.input_channels).to(self.device)
         self.last_epoch, optim_params, self.running_reward = self.policy.load_checkpoint(config['params_path'])
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
         if optim_params is not None:
@@ -57,7 +57,7 @@ class ReinforceBaselineTrainer:
         # Normalize returns (this usually accelerates convergence)
         eps = np.finfo(np.float32).eps.item()
         returns = (returns - returns.mean()) / (returns.std() + eps)
-        for (log_prob, baseline) ,G in zip(self.policy.saved_log_probs, returns):
+        for (log_prob, baseline), G in zip(self.policy.saved_log_probs, returns):
             advantage = G - baseline.item()
 
             # calculate actor (policy) loss

@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 
-from policies.reinforce_policy import ReinforcePolicy
+from policies.actor_policy import ReinforcePolicy
 from actions import get_action
 
 

@@ -4,20 +4,29 @@ import numpy as np
 import helpers
 from environment import CarRacingEnv
 from runner import Runner
-from trainers.reinforce_baseline_trainer import ReinforceBaselineTrainer
+from trainers.ppo_trainer import PPOTrainer
 
 # if gpu is to be used
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+#for concurrent runs and logging
+experiment='ppo-nm'
 if __name__ == "__main__":
     hyperparams = {
-        'num_episodes': 200000,  # Number of training episodes
+        'num_epochs': 25000,  # Number of training episodes
+        'num_ppo_epochs': 10,
+        'mini_batch_size': 128,
+        'memory_size': 2000,
+        'eps': 0.2,
+        'c1': 1.,  # Value Function coeff
+        'c2': 0.01,  # Entropy coeff
         'lr': 1e-3,  # Learning rate
         'gamma': 0.99,  # Discount rate
         'log_interval': 10,  # controls how often we log progress
         'stack_frames': 4,
         'device': device,
-        'params_path': './params/policy-params.dl',
+        'experiment':experiment,
+        'params_path': f'./params/policy-params-{experiment}.dl',
         'action_set_num': 0,
         'train': True
     }
@@ -34,9 +43,8 @@ if __name__ == "__main__":
     env = CarRacingEnv(device, seed, hyperparams['stack_frames'], hyperparams['train'])
     helpers.display_start()
     if hyperparams['train']:
-        trainer = ReinforceBaselineTrainer(env, hyperparams)
+        trainer = PPOTrainer(env, hyperparams)
         trainer.train()
     else:
         runner = Runner(env, hyperparams)
         runner.run()
-

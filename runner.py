@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 
-from policies.reinforce_policy import ReinforcePolicy
+from policies.actor_policy import ReinforcePolicy
 from actions import get_action
 
 class Runner:

@@ -1,13 +1,12 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from os import path
 
 
-class ReinforceBaselinePolicy(nn.Module):
+class ActorCriticPolicy(nn.Module):
 
     def __init__(self, actor_output, critic_output, inputs=4):
-        super(ReinforceBaselinePolicy, self).__init__()
+        super(ActorCriticPolicy, self).__init__()
         self.pipeline = nn.Sequential(
             nn.Conv2d(inputs, 12, kernel_size=3, stride=2, padding=1),  # [12, 48, 48]
             nn.ReLU(),
@@ -31,23 +30,25 @@ class ReinforceBaselinePolicy(nn.Module):
         # critic's layer
         self.critic_head = nn.Linear(128, critic_output)
 
+        self.activation = nn.Softmax(dim=-1)
+
         self.saved_log_probs = []
         self.rewards = []
         self.entropies = []
 
     def forward(self, x):
-
+       
         x = self.pipeline(x)
-        # actor: choses action to take from state s_t
+        # actor: chooses action to take from state s_t
         # by returning probability of each action
-        action_prob = F.softmax(self.actor_head(x), dim=-1)
+        action_prob = self.activation(self.actor_head(x))
 
         # critic: evaluates being in the state s_t
         state_values = self.critic_head(x)
 
         # return values for both actor and critic as a tuple of 2 values:
         # 1. a list with the probability of each action over the action space
-        # 2. the value from state s_t
+        # 2. the value from state s_t 
         return action_prob, state_values
 
     def load_checkpoint(self, params_path):
