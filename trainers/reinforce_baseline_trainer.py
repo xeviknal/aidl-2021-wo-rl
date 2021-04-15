@@ -11,17 +11,17 @@ from actions import get_action
 
 class ReinforceBaselineTrainer:
 
-    def __init__(self, env, config):
+    def __init__(self, env, config, policy_class):
         super().__init__()
         self.SavedAction = namedtuple('SavedAction', ['log_prob', 'value'])
         self.env = env
-        self.gamma = config['gamma']
         self.config = config
+        self.gamma = config['gamma']
         self.input_channels = config['stack_frames']
         self.device = config['device']
-        self.writer = SummaryWriter(flush_secs=5)
+        self.writer = SummaryWriter(flush_secs=5, log_dir=config['runs_path'])
         self.action_set = get_action(config['action_set_num'])
-        self.policy = ActorCriticPolicy(len(self.action_set), 1, self.input_channels).to(self.device)
+        self.policy = policy_class(len(self.action_set), 1, self.input_channels).to(self.device)
         self.last_epoch, optim_params, self.running_reward = self.policy.load_checkpoint(config['params_path'])
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
         if optim_params is not None:
@@ -78,7 +78,7 @@ class ReinforceBaselineTrainer:
 
     def train(self):
         # Training loop
-        print("Target reward: {}".format(self.env.spec().reward_threshold))
+        print("Strategy: {} - Target reward: {}".format("baseline", self.env.spec().reward_threshold))
         for i_episode in range(self.config['num_episodes'] - self.last_epoch):
             # Convert to 1-indexing to reduce complexity
             i_episode+=1

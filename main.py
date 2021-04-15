@@ -5,10 +5,11 @@ import numpy as np
 import helpers
 from environment import CarRacingEnv
 from runner import Runner
-from trainers.ppo_trainer import PPOTrainer
+import trainers.factory as trainer_factory
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--experiment", help="Name of the experiment", type=str, default="default")
+parser.add_argument("--strategy", help="Name of the strategy to follow for training: vpg, baseline, ppo", type=str, default="vpg")
 parser.add_argument("--log_interval", help="Checkpoint frequency", type=int, default=50)
 parser.add_argument("--record", help="Runs the environment and records it", type=bool, default=False)
 parser.add_argument("--epochs", help="Number of epochs to train", type=int, default=25000)
@@ -31,6 +32,7 @@ if __name__ == "__main__":
     hyperparams = {
         # Run management params
         'experiment': args.experiment,
+        'strategy': args.strategy,
         'params_path': f'./params/policy-params-{args.experiment}.dl',
         'runs_path': f'./runs/{args.experiment}',
         'log_interval': args.log_interval,  # controls how often we log progress
@@ -38,6 +40,7 @@ if __name__ == "__main__":
         'train': not args.record,
         # Train management
         'num_epochs': args.epochs,  # Number of training episodes
+        'num_episodes': args.epochs,  # Number of training episodes
         'num_ppo_epochs': args.ppo_epochs,
         'mini_batch_size': args.ppo_batch_size,
         'memory_size': args.ppo_memory_size,
@@ -64,7 +67,7 @@ if __name__ == "__main__":
     env = CarRacingEnv(device, seed, hyperparams['stack_frames'], hyperparams['train'])
     helpers.display_start()
     if hyperparams['train']:
-        trainer = PPOTrainer(env, hyperparams)
+        trainer = trainer_factory.build(hyperparams['strategy'], env, hyperparams)
         trainer.train()
     else:
         runner = Runner(env, hyperparams)
