@@ -11,7 +11,7 @@ from policies.actor_critic_policy import ActorCriticPolicy
 
 class PPOTrainer:
 
-    def __init__(self, env, config):
+    def __init__(self, env, config, policy_class):
         super().__init__()
         self.env = env
         self.config = config
@@ -25,7 +25,7 @@ class PPOTrainer:
         self.c1, self.c2, self.eps = config['c1'], config['c2'], config['eps']
         self.writer = SummaryWriter(flush_secs=5, log_dir=config['runs_path'])
         self.action_set = get_action(config['action_set_num'])
-        self.policy = ActorCriticPolicy(len(self.action_set), 1, self.input_channels).to(self.device)
+        self.policy = policy_class(len(self.action_set), 1, self.input_channels).to(self.device)
         self.last_epoch, optim_params, self.running_reward = self.policy.load_checkpoint(config['params_path'])
         self.memory = ReplayMemory(self.memory_size)
         self.value_loss = nn.SmoothL1Loss()
@@ -139,7 +139,7 @@ class PPOTrainer:
 
     def train(self):
         # Training loop
-        print("Target reward: {}".format(self.env.spec().reward_threshold))
+        print("Strategy: {} - Target reward: {}".format("ppo", self.env.spec().reward_threshold))
         global_step = 0
         for epoch in range(self.epochs - self.last_epoch - 1):
             # The episode counting starts from last checkpoint

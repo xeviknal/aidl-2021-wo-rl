@@ -34,6 +34,7 @@ def print_hyperparams(config):
 def display_start():
     display = Display(visible=0, size=(1400, 900))
     display.start()
+    return display
 
 
 def save_model(model, path):

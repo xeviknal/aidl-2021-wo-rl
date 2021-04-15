@@ -3,10 +3,10 @@ import torch.nn as nn
 from os import path
 
 
-class ReinforcePolicy(nn.Module):
+class ActorPolicy(nn.Module):
 
     def __init__(self, inputs=4, outputs=8):
-        super(ReinforcePolicy, self).__init__()
+        super(ActorPolicy, self).__init__()
         self.pipeline = nn.Sequential(
             nn.Conv2d(inputs, 12, kernel_size=3, stride=2, padding=1),  # [12, 48, 48]
             nn.ReLU(),

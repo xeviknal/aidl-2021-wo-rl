@@ -2,13 +2,13 @@ import torch
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 
-from policies.actor_policy import ReinforcePolicy
+from policies.actor_policy import ActorPolicy
 from actions import get_action
 
 
 class ReinforceTrainer:
 
-    def __init__(self, env, config):
+    def __init__(self, env, config, policy_class):
         super().__init__()
         self.env = env
         self.gamma = config['gamma']
@@ -16,8 +16,8 @@ class ReinforceTrainer:
         self.input_channels = config['stack_frames']
         self.device = config['device']
         self.action_set = get_action(config['action_set_num'])
-        self.writer = SummaryWriter(flush_secs=5)
-        self.policy = ReinforcePolicy(self.input_channels, len(self.action_set)).to(self.device)
+        self.writer = SummaryWriter(flush_secs=5, log_dir=config['runs_path'])
+        self.policy = policy_class(self.input_channels, len(self.action_set)).to(self.device)
         self.last_epoch, optim_params, self.running_reward = self.policy.load_checkpoint(config['params_path'])
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
         if optim_params is not None:
@@ -73,7 +73,7 @@ class ReinforceTrainer:
 
     def train(self):
         # Training loop
-        print("Target reward: {}".format(self.env.spec().reward_threshold))
+        print("Strategy: {} - Target reward: {}".format("vpg", self.env.spec().reward_threshold))
         ep_rew_history = []
         for i_episode in range(self.config['num_episodes'] - self.last_epoch):
             # Convert to 1-indexing to reduce complexity
