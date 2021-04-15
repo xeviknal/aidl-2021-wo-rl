@@ -2,7 +2,7 @@ import torch
 import numpy as np
 
 from policies.reinforce_policy import ReinforcePolicy
-from actions import available_actions
+from actions import get_action
 
 class Runner:
     def __init__(self, env, config):
@@ -10,8 +10,8 @@ class Runner:
         self.env = env
         self.config = config
         self.input_channels = config['stack_frames']
-        #self.device = config['device']
-        self.policy = ReinforcePolicy(self.input_channels, len(available_actions))
+        self.action_set = get_action(config['action_set_num'])
+        self.policy = ReinforcePolicy(self.input_channels, len(self.action_set))
         self.policy.load_checkpoint(config['params_path'])
 
     def select_action(self, state):
@@ -26,7 +26,7 @@ class Runner:
         # It prevents the model from picking always the same action
         m = torch.distributions.Categorical(probs)
         action = m.sample()
-        return available_actions[action.item()]
+        return self.action_set[action.item()]
 
     def run(self):
         state, done, total_rew = self.env.reset(), False, 0
