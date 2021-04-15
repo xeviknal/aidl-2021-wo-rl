@@ -13,5 +13,9 @@ strategy2Trainer = {
 
 
 def build(strategy, env, hyper_params):
-    trainer_class, policy_class = strategy2Trainer.get(strategy, strategy2Trainer['vpg'])
+    trainer_class, policy_class = get_strategy_descriptor(strategy)
     return trainer_class(env, hyper_params, policy_class)
+
+
+def get_strategy_descriptor(strategy):
+    return strategy2Trainer.get(strategy, strategy2Trainer['vpg'])

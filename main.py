@@ -4,20 +4,23 @@ import numpy as np
 
 import helpers
 from environment import CarRacingEnv
-from runner import Runner
+import runner as runner_factory
 import trainers.factory as trainer_factory
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--experiment", help="Name of the experiment", type=str, default="default")
-parser.add_argument("--strategy", help="Name of the strategy to follow for training: vpg, baseline, ppo", type=str, default="vpg")
+parser.add_argument("--strategy", help="Name of the strategy to follow for training: vpg, baseline, ppo", type=str,
+                    default="vpg")
 parser.add_argument("--log_interval", help="Checkpoint frequency", type=int, default=50)
 parser.add_argument("--record", help="Runs the environment and records it", type=bool, default=False)
 parser.add_argument("--epochs", help="Number of epochs to train", type=int, default=25000)
 parser.add_argument("--lr", help="Learning rate", type=float, default=0.001)
 parser.add_argument("--gamma", help="Discount factor", type=float, default=0.99)
 parser.add_argument("--action_set", help="Action set: the set of actions that the policy will use", type=int, default=0)
-parser.add_argument("--ppo_epochs", help="Number of proximal optimization epochs (Only for PPO training)", type=int, default=10)
-parser.add_argument("--ppo_batch_size", help="Batch size for memory visit (Only for PPO training)", type=int, default=128)
+parser.add_argument("--ppo_epochs", help="Number of proximal optimization epochs (Only for PPO training)", type=int,
+                    default=10)
+parser.add_argument("--ppo_batch_size", help="Batch size for memory visit (Only for PPO training)", type=int,
+                    default=128)
 parser.add_argument("--ppo_memory_size", help="Memory size (Only for PPO training)", type=int, default=2000)
 parser.add_argument("--ppo_epsilon", help="Epsilon ratio (Only for PPO training)", type=float, default=0.2)
 parser.add_argument("--ppo_value_coeff", help="Value Function Coeff (Only for PPO training)", type=float, default=1.)
@@ -65,10 +68,11 @@ if __name__ == "__main__":
     helpers.create_directory('params')
 
     env = CarRacingEnv(device, seed, hyperparams['stack_frames'], hyperparams['train'])
-    helpers.display_start()
+    display = helpers.display_start()
     if hyperparams['train']:
         trainer = trainer_factory.build(hyperparams['strategy'], env, hyperparams)
         trainer.train()
     else:
-        runner = Runner(env, hyperparams)
+        runner = runner_factory.build(hyperparams['strategy'], env, hyperparams)
         runner.run()
+    display.stop()
