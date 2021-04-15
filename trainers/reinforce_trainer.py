@@ -2,11 +2,11 @@ import torch
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 
-from policy import Policy
+from policies.reinforce_policy import ReinforcePolicy
 from actions import available_actions
 
 
-class Trainer:
+class ReinforceTrainer:
 
     def __init__(self, env, config):
         super().__init__()
@@ -16,7 +16,7 @@ class Trainer:
         self.input_channels = config['stack_frames']
         self.device = config['device']
         self.writer = SummaryWriter(flush_secs=5)
-        self.policy = Policy(self.input_channels, len(available_actions)).to(self.device)
+        self.policy = ReinforcePolicy(self.input_channels, len(available_actions)).to(self.device)
         self.last_epoch, optim_params, self.running_reward = self.policy.load_checkpoint(config['params_path'])
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
         if optim_params is not None:

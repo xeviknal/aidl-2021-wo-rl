@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 
-from policy import Policy
+from policies.reinforce_policy import ReinforcePolicy
 from actions import available_actions
 
 class Runner:
@@ -11,7 +11,7 @@ class Runner:
         self.config = config
         self.input_channels = config['stack_frames']
         #self.device = config['device']
-        self.policy = Policy(self.input_channels, len(available_actions))
+        self.policy = ReinforcePolicy(self.input_channels, len(available_actions))
         self.policy.load_checkpoint(config['params_path'])
 
     def select_action(self, state):

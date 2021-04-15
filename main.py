@@ -4,7 +4,7 @@ import numpy as np
 import helpers
 from environment import CarRacingEnv
 from runner import Runner
-from trainer import Trainer
+from trainers.reinforce_trainer import ReinforceTrainer
 
 # if gpu is to be used
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -33,7 +33,7 @@ if __name__ == "__main__":
     env = CarRacingEnv(device, seed, hyperparams['stack_frames'], hyperparams['train'])
     helpers.display_start()
     if hyperparams['train']:
-        trainer = Trainer(env, hyperparams)
+        trainer = ReinforceTrainer(env, hyperparams)
         trainer.train()
     else:
         runner = Runner(env, hyperparams)
