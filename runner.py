@@ -27,7 +27,7 @@ class Runner:
         else:
             state = np.asarray(state)
         state = torch.from_numpy(state).float().unsqueeze(0)
-        probs = self.policy(state)
+        probs = self.policy(state)[0]
         # We pick the action from a sample of the probabilities
         # It prevents the model from picking always the same action
         m = torch.distributions.Categorical(probs)

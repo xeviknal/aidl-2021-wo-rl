@@ -5,7 +5,7 @@ from os import path
 
 class ActorCriticPolicy(nn.Module):
 
-    def __init__(self, actor_output, critic_output, inputs=4):
+    def __init__(self, inputs=4, actor_output=8, critic_output=1):
         super(ActorCriticPolicy, self).__init__()
         self.pipeline = nn.Sequential(
             nn.Conv2d(inputs, 12, kernel_size=3, stride=2, padding=1),  # [12, 48, 48]

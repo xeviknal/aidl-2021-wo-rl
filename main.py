@@ -36,7 +36,7 @@ if __name__ == "__main__":
         # Run management params
         'experiment': args.experiment,
         'strategy': args.strategy,
-        'params_path': f'./params/policy-params-{args.experiment}.dl',
+        'params_path': f'./params/policy-params-{args.experiment}-{args.strategy}.dl',
         'runs_path': f'./runs/{args.experiment}',
         'log_interval': args.log_interval,  # controls how often we log progress
         'device': device,
