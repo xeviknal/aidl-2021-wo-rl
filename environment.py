@@ -14,8 +14,10 @@ class CarRacingEnv:
         self.train = train
 
         self.env = gym.make("CarRacing-v0")
-        self.env.seed(seed)
-        if not train:
+        if train:
+            # Avoid placing a seed for recording scenarios
+            self.env.seed(seed)
+        else:
             self.env = Monitor(self.env, './video', force=True)
         self.env = GrayScaleObservation(self.env)
         self.env = FrameStack(self.env, stack_frames)

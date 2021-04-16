@@ -5,7 +5,6 @@ import torch.nn.functional as F
 from collections import namedtuple
 
 
-from policies.actor_critic_policy import ActorCriticPolicy
 from actions import get_action
 
 
@@ -21,7 +20,7 @@ class ReinforceBaselineTrainer:
         self.device = config['device']
         self.writer = SummaryWriter(flush_secs=5, log_dir=config['runs_path'])
         self.action_set = get_action(config['action_set_num'])
-        self.policy = policy_class(len(self.action_set), 1, self.input_channels).to(self.device)
+        self.policy = policy_class(self.input_channels, len(self.action_set), 1).to(self.device)
         self.last_epoch, optim_params, self.running_reward = self.policy.load_checkpoint(config['params_path'])
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=config['lr'])
         if optim_params is not None:
