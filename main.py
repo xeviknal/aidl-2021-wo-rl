@@ -1,5 +1,5 @@
 import torch
-
+import numpy as np
 import helpers
 from environment import CarRacingEnv
 from trainer import Trainer
@@ -21,6 +21,13 @@ if __name__ == "__main__":
         'params_path': './params/policy-params.dl',
         'train': True
     }
+
+    # Reproducibility: manual seeding
+    seed = 7081960
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    np.random.seed(seed)
+
 
     env = CarRacingEnv(device, hyperparams['stack_frames'], hyperparams['train'])
     helpers.display_start()
