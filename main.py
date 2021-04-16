@@ -14,7 +14,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def train(config):
     # Reproducibility: manual seeding
-    seed = 7081960  # Yann LeCun birthday
+    seed = config['seed']
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     np.random.seed(seed)
@@ -42,12 +42,12 @@ experiment = 'ppo-nm-hp-tuning-max'
 if __name__ == "__main__":
     hyperparams = {
         'num_epochs': 1500,  # Number of training episodes
-        'num_ppo_epochs': tune.randint(4, 10),
+        'num_ppo_epochs': tune.randint(3, 5),
         'mini_batch_size': 128,
         'memory_size': 2000,
-        'eps': tune.quniform(0.1, 0.2, 0.1),
+        'eps': 0.2,
         'c1': tune.quniform(0.5, 2.5, 0.25),  # Value Function coeff
-        'c2': tune.quniform(0.01, 0.15, 0.01),  # Entropy coeff
+        'c2': tune.quniform(0.00, 0.16, 0.02),  # Entropy coeff
         'lr': 1e-3,  # Learning rate
         'gamma': 0.99,  # Discount rate
         'log_interval': 10,  # controls how often we log progress
@@ -56,13 +56,14 @@ if __name__ == "__main__":
         'experiment': experiment,
         'action_set_num': 4,
         'train': True,
+        'seed': tune.grid_search([7081960, 1000, 190421])
     }
 
 analysis = tune.run(
     train,
     metric='running_reward',
     mode='max',
-    num_samples=20,
+    num_samples=18,
     resources_per_trial={"cpu": 0.4, "gpu": 0.3},
     config=hyperparams,
 )
