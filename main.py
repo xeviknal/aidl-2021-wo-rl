@@ -1,5 +1,7 @@
+import time
 import torch
 import numpy as np
+from ray import tune
 
 import helpers
 from environment import CarRacingEnv
@@ -9,42 +11,65 @@ from trainer import Trainer
 # if gpu is to be used
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-#for concurrent runs and logging
-experiment='ppo-nm'
+
+def train(config):
+    # Reproducibility: manual seeding
+    seed = config['seed']
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    np.random.seed(seed)
+
+    config['params_path'] = f'./params/policy-params-{experiment}-{int(time.time())}.dl'
+
+    # make sure that params folder exists
+    helpers.create_directory('params')
+
+    env = CarRacingEnv(device, seed, config['stack_frames'], config['train'])
+    helpers.display_start()
+    # Train it first
+    trainer = Trainer(env, config)
+    trainer.train()
+
+    # Let's store a vid with one episode
+    config['train'] = False
+    runner = Runner(env, config)
+    runner.run()
+    config['train'] = True
+
+
+# for concurrent runs and logging
+experiment = 'ppo-nm-hp-tuning-max'
 if __name__ == "__main__":
     hyperparams = {
-        'num_epochs': 25000,  # Number of training episodes
-        'num_ppo_epochs': 10,
+        'num_epochs': 1500,  # Number of training episodes
+        'num_ppo_epochs': tune.randint(3, 5),
         'mini_batch_size': 128,
         'memory_size': 2000,
         'eps': 0.2,
-        'c1': 1.,  # Value Function coeff
-        'c2': 0.01,  # Entropy coeff
+        'c1': tune.quniform(0.5, 2.5, 0.25),  # Value Function coeff
+        'c2': tune.quniform(0.00, 0.16, 0.02),  # Entropy coeff
         'lr': 1e-3,  # Learning rate
         'gamma': 0.99,  # Discount rate
         'log_interval': 10,  # controls how often we log progress
         'stack_frames': 4,
         'device': device,
-        'experiment':experiment,
-        'params_path': f'./params/policy-params-{experiment}.dl',
-        'action_set_num': 0,
-        'train': True
+        'experiment': experiment,
+        'action_set_num': 4,
+        'train': True,
+        'seed': tune.grid_search([7081960, 1000, 190421])
     }
 
-    # Reproducibility: manual seeding
-    seed = 7081960  # Yann LeCun birthday
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    np.random.seed(seed)
+analysis = tune.run(
+    train,
+    metric='running_reward',
+    mode='max',
+    num_samples=18,
+    resources_per_trial={"cpu": 0.4, "gpu": 0.3},
+    config=hyperparams,
+)
 
-    # make sure that params folder exists
-    helpers.create_directory('params')
+print("Best config: ", analysis.get_best_config(
+    metric="running_reward", mode="max"))
 
-    env = CarRacingEnv(device, seed, hyperparams['stack_frames'], hyperparams['train'])
-    helpers.display_start()
-    if hyperparams['train']:
-        trainer = Trainer(env, hyperparams)
-        trainer.train()
-    else:
-        runner = Runner(env, hyperparams)
-        runner.run()
+# Get a dataframe for analyzing trial results.
+df = analysis.results_df
