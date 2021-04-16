@@ -28,17 +28,19 @@ In the end the original goal was too ambitious and the project ended up divided 
 
 Reinforcement Learning (RL) is a *computational approach to goal-directed learning form interaction that does not rely on expert supervision* [(quote)](https://mitpress.mit.edu/books/reinforcement-learning-second-edition). In other words, it's the branch of Machine Learning that tries to achieve a task by using an active agent that reads data from the environment and a "teacher" that gives an extrinsic reward to the model in order to teach it when it's doing well. The agent gets a ***state*** from the environment and performs an ***action*** on the environment, which is then either rewarded, punished or ignored; then the agent gets a new state and the cycle repeats.
 
-![01_intro_pdf](https://user-images.githubusercontent.com/1465235/114918938-f5390500-9e27-11eb-876d-00c59f9d747b.jpg)
+![RL basic diagram](/readme_media/RL.jpg)
 
 OpenAI Gym is a popular framework for training Reinforcement Learning models. Gym provides a set of pre-made environments that allows students and researchers to test different approaches to solve the tasks proposed by each particular environment. One of these environments is [Car Racing](https://gym.openai.com/envs/CarRacing-v0/), which provides an 8-bit-videogame-like environment in which a car appears on a randomly generated circuit. The task to be achieved in this environment is to teach the car to drive itself in order to finish a lap.
 
-![Apr-15-2021 20-10-16](https://user-images.githubusercontent.com/1465235/114917836-b35b8f00-9e26-11eb-9f53-72ba1f8e770f.gif)
+![Agent choosing random actions](/readme_media/randomagent.gif)
 
 The Car Racing environment outputs a ***state*** consisting on a 96x96 RGB image that displays the car and the track from a top-down view, as well as an additional black bar at the bottom of the image which contains various car sensor info. The environment expects an ***action*** input which consists of an array with 3 floating point numbers which represent turning direction (from -1 to 1, representing left to right), throttle (from 0 to 1, representing no throttle to full throttle) and brake (from 0 to 1 too, representing no brake to full brakes) inputs for the car to take. After receiving the action, the environment will return a ***reward*** as well as a new ***state*** consisting of an updated image that reflects the updated position of the car in the track. The environment will also output a *done* boolean value that will be `True` when the car finishes a lap or when it drives outside of the boundaries of the environment.
 
 The default reward is a floating point value that may be positive or negative depending on the performance of the car on the track. The reward is -0.1 every frame and +1000/N for every track tile visited, where N is the total number of tiles visited in the track. For example, if you have finished the track in 732 frames, the reward will be 1000 - 0.1 * 732 = 926.8 points. The task is considered finished when the agent consistently gets more than 900 points, but the definition of "consistently" is undefined by the environment and it's left for the developer to define it when implementing a solution.
 
-## First approach
+The Car Racing environment features a physics model that affects the behaviour of the car. The car has rear-wheel propulsion and has very high acceleration, which makes it very easy for the car to oversteer and drift, making it very hard for a human player to regain control once the car starts skidding.
+
+## First steps
 
 We decided to initially approach the task by using policy-based RL methods, starting from REINFORCE-Vanilla Policy Gradient and implementing more sophisticated algorithms as we understood the behavior, advantages and shortcomings of each algorithm. Our chosen library was PyTorch due to our familiriaty with it and its ease of use.
 
@@ -46,10 +48,26 @@ Before implementing any algorithm, however, we knew from our classes and from ad
 * Monitor: one of Gym's provided wrappers. It provides an easy way to record the output of the environment to a video file.
 * GrayScaleObservation: another provided wrapper; it transforms RGB images to monochrome. Useful for reducing dimensionality in cases where the additional RGB info does not provide useful info compared to black and white images.
 * FrameStack: another provided wrapper; FrameStack allows us to "stack" frames (states) in order to create a "mini-batch" of sorts for more efficient training.
-* FrameSkipper: an original wrapper; FrameSkipper is a companion to FrameStack and allows us to skip stacked frames so that we do not use redundant frames.
+* FrameSkipper: an original wrapper; FrameSkipper allows us to "skip" frames: instead of choosing an action for each frame, we use the same action for all of the skipped frames. This allows us to reduce the amount of actions we need to calculate.
 * EarlyStop: an original wrapper; when used, the environment will output `done = True` in additional circunstances besides the default ones, such as getting a negative average reward. This allows us to stop the execution early and train with more episodes.
 
-**THIS MAY NOT GO HERE**There is also the issue of defining what "consistently" means when trying to get a reward of "consistently more than 900 points". We settled on calculating a *running reward* that accumulates the previously obtained rewards and calculates an average of sorts that represents the reward you can expect from the model at a specific stage of training, which is calculated as `running_reward = 0.05 * episode_reward + (1 - 0.05) * running_reward`.
+***NEEDS REVIEW*** There is also the issue of defining what "consistently" means when trying to get a reward of "consistently more than 900 points". We settled on calculating a *running reward* that accumulates the previously obtained rewards and calculates an average of sorts that represents the reward you can expect from the model at a specific stage of training, which is calculated as `running_reward = 0.05 * episode_reward + (1 - 0.05) * running_reward`, where `episode_reward` is the reward we obtain for each lap attempt.
+
+For all of our experiments, the chosen optimizer was Adam, since it seems to be the default optimizer for pretty much any task. We did not experiment with additional optimizers.
+
+In order to simplify the code, we decided to have a discrete set of actions initially. The Car Racing environment accepts floating point values as input, which makes it possible to finetune the car driving experience by having contiguous action values, but discrete separate actions allows us to understand the environment better by letting us experiment with the action values and simplifies the code by not having to calculate the additional probability distributions needed to calculate the contiguous values. Our goal was to code contiguous values as a later feature in order to compare experiments but unfortunately we did not have the time to do so.
+
+## Deep neural network
+
+The next step is defining a deep neural network architecture that can process the state.
+
+As previously said, the Car Racing environment outputs a state that consists of a 96x96 pixel RGB image. The obvious choice then is to use some sort of model based on convolutional layers to extract the image features and work with them.
+
+The state is a very small image composed with very simple graphics with flat colors, so a complex network with dozens of layers isn't needed. We designed a very simple model with 3 convolutional layers intercalated with 3 pooling layers and 3 fully connected layers at the end.
+
+![Our model](/readme_media/policy.png)
+
+We experimented with different network configurations and we ended up with slight differences for each implemented RL method, but the basic structure shared among them is the one described above.
 
 ## Policy-based RL
 
@@ -59,14 +77,53 @@ A policy-based method maps the observations (*states*) that the agent obtains an
 
 The Car Racing environment and task are very simple: the possible actions that the car may take are limited and there are no instances of having to decide between multiple paths or any other complex scenarios which may need the model to decide between 2 equally valid actions. Thus, a policy-based method seems better suited for this task.
 
+For policy-based methods, there are 2 important functions:
+* The **Return G_t** function is a function that calculates the future reward starting from a timestep *t*. It can be thought of as the sum of all rewards starting from timestep *t+1* up to a final timestep *T*. In scenarios where it's impossible to know what the value of the final timestep *T* will be, a *discount rate ɣ* is applied to each additional timestep, so that the final value of *G_t* will always be finite.
+* The **Objective J(θ)** function returns the expected value of *G_t* given a set of parameters *θ* from our *policy* (our deep neural network).
+
+By estimating the gradient of *J(θ)* with respect to each policy parameter, we can then use stochastic gradient ascend and backpropagation to update the parameters and train the policy, like this:
+
+![](/readme_media/RLformula.jpg)
+
+Where *ɑ* is the *learning rate* that we use to regulate the learning "jumps".
+
+In a way, the *J(θ)* function can be understood as an equivalent to the ***loss function*** of classic deep supervised learning.
+
+The main obstacle is that *G_t* relies on the results of the future timesteps and we cannot analitically calculate *J(θ)*, much less its derivative. Therefore, many different methods have been developed to approximate it. We have chosen to implement 3 of these methods, described below: *REINFORCE*, *REINFORCE with Baseline* and *Proximal Policy Optimization*.
+
 ### REINFORCE (Vanilla Policy Gradient)
 
 The first algorithm we implemented is also the simplest policy-based RL algorithm: REINFORCE, a.k.a. Vanilla Policy Gradient.
 
 REINFORCE is a mathematical version or *trial-and-error*: we essentially attempt to make the car complete a lap around the track one, then train the network on that lap attempt, and try again for as many times as we seem necessary.
 
-On each lap attempt, the agent reads the state from the environment and calls a `select_action` function that uses our *policy* (our deep neural network) to choose an action, which is then fed to the model in order to output a reward and the next state. Each reward is stored in a buffer
+On each lap attempt, the agent reads the state from the environment and calls a `select_action` function that samples an action from a set of action probabilities calculated by the policy network; this sampled action is then fed to the environment in order to output a reward and the next state. Each reward output by the environment is stored in a buffer, as well as all the action probability (in logarithmic form) for the action that resulted in that reward. When the lap attempt finishes and all rewards are collected,  we proceed update the policy network's weights by following this formula:
 
+![Reinforce formula](/readme_media/reinforce.jpg)
+
+In REINFORCE, the approximation of the gradient of the objective function is simply the product of Gt (the sum of all future rewards from that timestep *t*) and the logarithm of the action probability. This can be interpreted as the formula of the Policy Gradient Theorem and using Monte Carlo (samples) to obtain approximate values.
+
+By storing the reward and the action probability of each step of the lap attempt in a buffer, we can easily calculate *G_t* for any given timestep and multiply it with the logarithm of the action probability that we obtained when selecting the action. We calculate this value for all timesteps in a buffer and then apply backpropagation on it to update the policy parameters. We also update the running reward right before updating the policy.
+
+The REINFORCE algorithm is easy to implement but has 2 big shortcomings:
+* Very high variance: REINFORCE is capable of finding very good policy parameters but convergence is very slow because each lap attempt can vary greatly. Finding a good running reward without many thousands of lap attempts requires lots of luck in order to get lap attempts with good rewards.
+* Slow learning: REINFORCE only updates the policy network once, at the end of each lap attempt. This requires us to run as many lap attempts as policy updates we want to have, thus slowing down the rate of learning even further.
+
+### REINFORCE with Baseline
+
+REINFORCE with Baseline adds a *baseline* variable to the objective formula in order to attempt to reduce the high variance issue. A good baseline variable is the *state value function V(s_t)*, which is defined as the expected returns (*expected G_t*) given a state following a policy *π_θ*. The updated formula for updating the policy parameters is as follows:
+
+![RL with Baseline formula](/readme_media/baseline_formula.jpg)
+
+In order to calculate *V(s_t)* we need to make a small change to our policy network: instead of having a single output for the action, we will have 2 separate fully connected layers at the end; the *actor head* calculates the action probabilities and the *critic head* calculates the state value. The `select_action` method samples an action just like in regular REINFORCE, and all the rewards, actions and state values are stored in a buffer for each step in the lap attempt.
+
+After completing the lap attempt and updating the running reward, we proceed to update the policy parameters following the formula described above.
+
+REINFORCE with Baseline is an easy method to implement because it only requires small modifications to REINFORCE and it also shows good results with fewer lap attempts.
+
+### Proximal Policy Optimization (PPO)
+
+The final method we implemented is Proximal Policy Optimization, a much more complex algorithm than the previous 2. 
 
 ## Experiment results
 
