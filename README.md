@@ -11,7 +11,7 @@ The original goal of the project was to train a self-driving model that would al
 
 In the end the original goal was too ambitious and the project ended up divided in 2 separate parts: the Gym part and the Robot part. This repo contains the Gym part; you may check out the robot part by visiting Rubén's repo at https://github.com/eldarsilver/DQN_Pytorch_ROS .
 
-## Running the code
+## Running the code **(NEEDS TO BE REDONE)**
 
 1. Clone the repo.
 2. Install the dependencies
@@ -36,9 +36,9 @@ OpenAI Gym is a popular framework for training Reinforcement Learning models. Gy
 
 The Car Racing environment outputs a ***state*** consisting on a 96x96 RGB image that displays the car and the track from a top-down view, as well as an additional black bar at the bottom of the image which contains various car sensor info. The environment expects an ***action*** input which consists of an array with 3 floating point numbers which represent turning direction (from -1 to 1, representing left to right), throttle (from 0 to 1, representing no throttle to full throttle) and brake (from 0 to 1 too, representing no brake to full brakes) inputs for the car to take. After receiving the action, the environment will return a ***reward*** as well as a new ***state*** consisting of an updated image that reflects the updated position of the car in the track. The environment will also output a *done* boolean value that will be `True` when the car finishes a lap or when it drives outside of the boundaries of the environment.
 
-The default reward is a floating point value that may be positive or negative depending on the performance of the car on the track. The reward is -0.1 every frame and +1000/N for every track tile visited, where N is the total number of tiles visited in the track. For example, if you have finished in 732 frames, the reward will be 1000 - 0.1 * 732 = 926.8 points. The task is considered finished when the agent consistently gets more than 900 points, but the definition of "consistently" is undefined by the environment and it's left for the developer to define it when implementing a solution.
+The default reward is a floating point value that may be positive or negative depending on the performance of the car on the track. The reward is -0.1 every frame and +1000/N for every track tile visited, where N is the total number of tiles visited in the track. For example, if you have finished the track in 732 frames, the reward will be 1000 - 0.1 * 732 = 926.8 points. The task is considered finished when the agent consistently gets more than 900 points, but the definition of "consistently" is undefined by the environment and it's left for the developer to define it when implementing a solution.
 
-## Our approach
+## First approach
 
 We decided to initially approach the task by using policy-based RL methods, starting from REINFORCE-Vanilla Policy Gradient and implementing more sophisticated algorithms as we understood the behavior, advantages and shortcomings of each algorithm. Our chosen library was PyTorch due to our familiriaty with it and its ease of use.
 
@@ -48,6 +48,25 @@ Before implementing any algorithm, however, we knew from our classes and from ad
 * FrameStack: another provided wrapper; FrameStack allows us to "stack" frames (states) in order to create a "mini-batch" of sorts for more efficient training.
 * FrameSkipper: an original wrapper; FrameSkipper is a companion to FrameStack and allows us to skip stacked frames so that we do not use redundant frames.
 * EarlyStop: an original wrapper; when used, the environment will output `done = True` in additional circunstances besides the default ones, such as getting a negative average reward. This allows us to stop the execution early and train with more episodes.
+
+**THIS MAY NOT GO HERE**There is also the issue of defining what "consistently" means when trying to get a reward of "consistently more than 900 points". We settled on calculating a *running reward* that accumulates the previously obtained rewards and calculates an average of sorts that represents the reward you can expect from the model at a specific stage of training, which is calculated as `running_reward = 0.05 * episode_reward + (1 - 0.05) * running_reward`.
+
+## Policy-based RL
+
+There are many methods to do Reinforcement Learning, which can all be classified using different criteria. One of the most common criteria is whether a method is *value-based* or *policy-based*.
+
+A policy-based method maps the observations (*states*) that the agent obtains and maps them to *actions*, whereas a value-based method will output a measure of quality of each possible action. For example, if we're using a map application to find a route between 2 places, a policy-based method would output the best possible route, and a value-based method will output a value associated to all possible routes, such as estimated travel time.
+
+The Car Racing environment and task are very simple: the possible actions that the car may take are limited and there are no instances of having to decide between multiple paths or any other complex scenarios which may need the model to decide between 2 equally valid actions. Thus, a policy-based method seems better suited for this task.
+
+### REINFORCE (Vanilla Policy Gradient)
+
+The first algorithm we implemented is also the simplest policy-based RL algorithm: REINFORCE, a.k.a. Vanilla Policy Gradient.
+
+REINFORCE is a mathematical version or *trial-and-error*: we essentially attempt to make the car complete a lap around the track one, then train the network on that lap attempt, and try again for as many times as we seem necessary.
+
+On each lap attempt, the agent reads the state from the environment and calls a `select_action` function that uses our *policy* (our deep neural network) to choose an action, which is then fed to the model in order to output a reward and the next state. Each reward is stored in a buffer
+
 
 ## Experiment results
 
@@ -68,3 +87,7 @@ Before implementing any algorithm, however, we knew from our classes and from ad
 #### Experiment Setup
 #### Results
 #### Conclusions
+
+## Pending stuff
+
+## References
