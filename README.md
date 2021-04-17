@@ -160,11 +160,62 @@ Our first milestone was reached when we managed to complete the REINFORCE implem
 
 However, we stumbled with our implementation due to both theory misunderstandings and code bugs. Xavi also found a memory leak in one of OpenAI's Gym libraries which caused our experiments to run out of memory, so we were forced us to fork them and fix them in order to successfully run them.
 
-We managed to get one run with 
+We expected to have very slow training but we encountered no training at all. Early on we had a run which managed to get good results but we hadn't yet implemented random seed presetting and we could not replicate the experiment. We started adding variables to TensorBoard to study what was happening and we discovered that the network entropy was collapsing very quickly.
 
+We decided to move on to implementing REINFORCE with Baseline as a way to deal with our frustration. We already knew that REINFORCE wasn't likely to solve the environment, so we decided to move on to the next milestone in order to further our progress and to get a better understanding of policy gradients.
 
+## Milestone #2: REINFORCE with Baseline and first insights
 
-# Experiment results
+Implementing REINFORCE with Baseline turned out to be one of the most productive tasks because it forced us to reevaluate many of our original design decisions:
+
+* We discovered a fundamental mistake in the way we were dealing with action probabilities and calculating the fina loss. We managed to fix in [in this commit](https://github.com/xeviknal/aidl-2021-wo-rl/commit/907af7a8043a6b540111ea4c833a2cae0a69c23d). Surprisingly, the good results we had gotten initially in the early lucky REINFORCE run had been done with a LogSoftmax final activation function rather than a regular Softmax; we still do not understand how it managed to train.
+* After some input from Juanjo, we realized that the set of discrete actions we had initially chosen was far from ideal, because we had not given it enough thought. We decided to create different action sets, each one with varying levels of granularization.
+* Again, after some input from Juanjo, we discovered a small difference in the code he had managed to run and get good results: the learning rate. We had mindlessly chosen a learning rate of 0.1 instead of the more usual 0.01, which had an enormous impact on our results: we went from barely managing a running reward of 30 after 24k episodes to running rewards close to 700 in less than 5k episodes.
+* We greatly improved our logging process. Sadly we lost the early results from the first milestone due to very big log files and GitHub issues and limitations; with the improvements we could now upload both network parameters and logs for each run and sotre them in separate branches for ease of comparison.
+
+After the great improvements, we could finally start running some experiments both with REINFORCE with Baseline as well as with BASELINE.
+
+1. [The first experiment in which we discovered the vast differences in training performance when reducing the learning rate](https://github.com/xeviknal/aidl-2021-wo-rl/pull/28)
+2. The second experiment, in which we proceed to test our different action sets with our fixed policy network and learning rate. We wanted to test the effects of the different action sets: our first conclusions were that having a larger set of possible actions seemed to help our model reach higher rewards.
+   1. [Action set #0](https://github.com/xeviknal/aidl-2021-wo-rl/pull/29) (largest action set).
+   2. [Action set #1](https://github.com/xeviknal/aidl-2021-wo-rl/pull/30).
+   3. [Action set #2](https://github.com/xeviknal/aidl-2021-wo-rl/pull/31).
+   4. [Action set #3](https://github.com/xeviknal/aidl-2021-wo-rl/pull/32) (identical to action set #2 except for an additional "no action" action to allow the network to let the car move by inertia).
+3. The third experiment, in which we tweaked our policy network after Juanjo's input: he suggested that there might be a possibility of further improvement by adding more fully connected layers to our `actor_head` and `critic_head`; we removed one layer from the main network body and moved it to the heads. We were excited by our preliminar results due to quick reward growth but the later experiments all suffered from entropy collapse.
+   1. [Initial test](https://github.com/xeviknal/aidl-2021-wo-rl/pull/33), which managed our highest reward yet.
+   2. [Action set #0](https://github.com/xeviknal/aidl-2021-wo-rl/pull/34).
+   3. [Action set #1](https://github.com/xeviknal/aidl-2021-wo-rl/pull/35).
+   4. [Action set #2](https://github.com/xeviknal/aidl-2021-wo-rl/pull/36).
+4. The 4th experiment restored the missing fully connected layer to the policy network and tweaked the heads to have less parameters and have a smaller bottleneck. However, the results were disappointing due to entropy collapse.
+   1. [Action set #0](https://github.com/xeviknal/aidl-2021-wo-rl/pull/39).
+   2. [Action set #1](https://github.com/xeviknal/aidl-2021-wo-rl/pull/40).
+   3. [Action set #2](https://github.com/xeviknal/aidl-2021-wo-rl/pull/41).
+5. For our final experiment with REINFORCE with Baseline, we took inspiration from [other code we were studying for PPO](https://github.com/xtma/pytorch_car_caring) and completely redid our network: we dropped the pooling layers and added more convolutional layers. We also added a new action set with an extreme amount of granularization to test our theory regarding having better results by having more available actions. We experienced episodes of near entropy collapse with later recovery in all of them, so we ended up dropping this network architecture and decided to keep ours.
+   1. [Action set #0](https://github.com/xeviknal/aidl-2021-wo-rl/pull/43) showed very promising results and managed to get peak running reward values of over 800, but after trying to improve the results by adding more training episodes, the reward became lower.
+   2. [Action set #1](https://github.com/xeviknal/aidl-2021-wo-rl/pull/44) showed a very long quasi-entropy collapse but seemed to recover near the end.
+   3. [Action set #2](https://github.com/xeviknal/aidl-2021-wo-rl/pull/46) had disappointing results.
+   4. [Extra action set #4](https://github.com/xeviknal/aidl-2021-wo-rl/pull/47) had lower than expected rewards. The entropy never seemed to quasi-collapse as hard as in the other experiments but while it managed to get a peak running reward of nearly 450, it was much less than what the experiment with action set #0 showed.
+
+Parallelly, we also started experimenting again with REINFORCE in order to understand why the entropy was collapsing so hard. Due to the success of the learning rate and the known inestabilty of the algorithm, [we decided to experiment with different learning rate values](https://github.com/xeviknal/aidl-2021-wo-rl/pull/37). The results were spectacular and with a very small learning rate of 1*10^(-5) we managed to get running rewards of more than 800.
+
+After the varying results of the experiments with different actions, we also started analyzing what the actions were actually doing and how they impacted the results. By watching different results, we observed the following:
+* The model never learns how to brake.
+* Because each new visited tile increases the reward, the model tries to accelerate and go as fast as possible, which poses a problem for very tight turns because the model can't brake.
+* When the car drifts out of the track and starts skidding on the grass, the model is able to bring the car back into the track as long as a track tile appears on screen. If the car drifts too far and the track disappears, the model cannot remember where the track as last seen and starts taking nonsensical actions.
+* If the model manages to recover from a burnout and gets the car back on track, it has no way of telling the proper track orientation and it oftens starts going backwards through the track.
+
+[We started experimenting with hybrid actions that combined both turning with acceleration and braking](https://github.com/xeviknal/aidl-2021-wo-rl/pull/45) in order to control the speed, and discovered that forcing a small amount of brakes while turning was an effective way of forcing the model to control its speed.
+
+Here are the things we learnt at this stage:
+* Hyperparameter tuning is crucial for Reinforcement Learning, as demonstrated by our learning rate experiments.
+* Rewards affects greatly to the action probabilities. The model never learns how to brake because the motivation to do so is missing.
+* We could "cheat" by designing an action set that limits the top speed of the car and induces actions that the model would otherwise never do, such as braking while turning.
+
+***TODO add entropy explanation***
+
+# Milestone #3: PPO
+
+# Final experiments
 ## Method
 ### Hypothesis
 ### Experiment Setup
@@ -175,8 +226,12 @@ We managed to get one run with
 
 ## Pending stuff
 
+There are several features and experiments that we wanted to implement but did not have the time for. In no particular order:
+* Create a new wrapper that modifies the rewards by having it return a negative reward when going outside the track or when a drift is detected, with the hopes that this would add an incentive for the model to learn how to brake before turns.
+
 ## References and notes
 
 * [Juanjo Nieto's *Policy Gradient Methods* slides](https://docs.google.com/presentation/d/1LKe3pLUIphKDytIuYF8LnM23trjHoWoAw22rDT4kCrs/edit)
 * [Víctor Campos' *Policy Gradients & Actor-Critic methods* slides](https://docs.google.com/presentation/d/1LBcfpJsOZlb5337-x2nqwqm0boay00HQELHlA-moUs8/edit)
 * [OpenAI's *Proximal Policy Optimization Algorithms* paper](https://arxiv.org/pdf/1707.06347.pdf)
+* [Car Racing with PyTorch](https://github.com/xtma/pytorch_car_caring)
