@@ -29,8 +29,7 @@ class Trainer:
             state = np.zeros((self.input_channels, 96, 96))
         else:
             state = np.asarray(state)
-        state = torch.from_numpy(state).float().unsqueeze(0).view(1, self.input_channels, 96, 96)
-        state.to(self.device)
+        state = torch.from_numpy(state).float().unsqueeze(0).view(1, self.input_channels, 96, 96).to(self.device)
         probs = self.policy(state)
 
         # We pick the action from a sample of the probabilities
