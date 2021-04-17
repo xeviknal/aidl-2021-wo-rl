@@ -11,7 +11,7 @@ The original goal of the project was to train a self-driving model that would al
 
 In the end the original goal was too ambitious and the project ended up divided in 2 separate parts: the Gym part and the Robot part. This repo contains the Gym part; you may check out the robot part by visiting Rubén's repo at https://github.com/eldarsilver/DQN_Pytorch_ROS .
 
-## Running the code **(NEEDS TO BE REDONE)**
+# Running the code **(NEEDS TO BE REDONE)**
 
 1. Clone the repo.
 2. Install the dependencies
@@ -24,7 +24,7 @@ In the end the original goal was too ambitious and the project ended up divided 
  3. Open `main.py` and change the hyperparameters as needed.
  4. Run `python main.py`
 
-## Reinforcement Learning and Car Racing
+# Reinforcement Learning and Car Racing
 
 Reinforcement Learning (RL) is a *computational approach to goal-directed learning form interaction that does not rely on expert supervision* [(quote)](https://mitpress.mit.edu/books/reinforcement-learning-second-edition). In other words, it's the branch of Machine Learning that tries to achieve a task by using an active agent that reads data from the environment and a "teacher" that gives an extrinsic reward to the model in order to teach it when it's doing well. The agent gets a ***state*** from the environment and performs an ***action*** on the environment, which is then either rewarded, punished or ignored; then the agent gets a new state and the cycle repeats.
 
@@ -40,7 +40,7 @@ The default reward is a floating point value that may be positive or negative de
 
 The Car Racing environment features a physics model that affects the behaviour of the car. The car has rear-wheel propulsion and has very high acceleration, which makes it very easy for the car to oversteer and drift, making it very hard for a human player to regain control once the car starts skidding.
 
-## First steps
+# First steps
 
 We decided to initially approach the task by using policy-based RL methods, starting from REINFORCE-Vanilla Policy Gradient and implementing more sophisticated algorithms as we understood the behavior, advantages and shortcomings of each algorithm. Our chosen library was PyTorch due to our familiriaty with it and its ease of use.
 
@@ -55,9 +55,9 @@ Before implementing any algorithm, however, we knew from our classes and from ad
 
 For all of our experiments, the chosen optimizer was Adam, since it seems to be the default optimizer for pretty much any task. We did not experiment with additional optimizers.
 
-In order to simplify the code, we decided to have a discrete set of actions initially. The Car Racing environment accepts floating point values as input, which makes it possible to finetune the car driving experience by having contiguous action values, but discrete separate actions allows us to understand the environment better by letting us experiment with the action values and simplifies the code by not having to calculate the additional probability distributions needed to calculate the contiguous values. Our goal was to code contiguous values as a later feature in order to compare experiments but unfortunately we did not have the time to do so.
+In order to simplify the code, we decided to have a discrete set of actions initially. The Car Racing environment accepts floating point values as input, which makes it possible to finetune the car driving experience by having continuous action values, but discrete separate actions allows us to understand the environment better by letting us experiment with the action values and simplifies the code by not having to calculate the additional probability distributions needed to calculate the continuous values. Our goal was to code continuous values as a later feature in order to compare experiments but unfortunately we did not have the time to do so.
 
-## Deep neural network
+# Deep neural network
 
 The next step is defining a deep neural network architecture that can process the state.
 
@@ -69,7 +69,9 @@ The state is a very small image composed with very simple graphics with flat col
 
 We experimented with different network configurations and we ended up with slight differences for each implemented RL method, but the basic structure shared among them is the one described above.
 
-## Policy-based RL
+# Policy-based RL
+
+(This section explains a few theory concepts in order to give anyone who visits the repo additional context and help her understand our code; most details about these algorithms such as the Policy Gradient Theorem or detailed explanations of the formulas and how to obtain them won't be covered for brevity's sake as well as for being outside the scope of this README file. We encourage anyone who wishes to learn more about Reinforcement Learning to check the linked resources listed at the end of the file).
 
 There are many methods to do Reinforcement Learning, which can all be classified using different criteria. One of the most common criteria is whether a method is *value-based* or *policy-based*.
 
@@ -91,7 +93,7 @@ In a way, the *J(θ)* function can be understood as an equivalent to the ***loss
 
 The main obstacle is that *G_t* relies on the results of the future timesteps and we cannot analitically calculate *J(θ)*, much less its derivative. Therefore, many different methods have been developed to approximate it. We have chosen to implement 3 of these methods, described below: *REINFORCE*, *REINFORCE with Baseline* and *Proximal Policy Optimization*.
 
-### REINFORCE (Vanilla Policy Gradient)
+## REINFORCE (Vanilla Policy Gradient)
 
 The first algorithm we implemented is also the simplest policy-based RL algorithm: REINFORCE, a.k.a. Vanilla Policy Gradient.
 
@@ -109,23 +111,23 @@ The REINFORCE algorithm is easy to implement but has 2 big shortcomings:
 * Very high variance: REINFORCE is capable of finding very good policy parameters but convergence is very slow because each lap attempt can vary greatly. Finding a good running reward without many thousands of lap attempts requires lots of luck in order to get lap attempts with good rewards.
 * Slow learning: REINFORCE only updates the policy network once, at the end of each lap attempt. This requires us to run as many lap attempts as policy updates we want to have, thus slowing down the rate of learning even further.
 
-### REINFORCE with Baseline
+## REINFORCE with Baseline
 
-REINFORCE with Baseline adds a *baseline* variable to the objective formula in order to attempt to reduce the high variance issue. A good baseline variable is the *state value function V(s_t)*, which is defined as the expected returns (*expected G_t*) starting at the state *s_t* following a policy *π_θ*. The updated formula for updating the policy parameters is as follows:
+REINFORCE with Baseline adds a *baseline* variable to the objective formula in order to mitigate the high variance issue. A good baseline variable is the *state value function V(s_t)*, which is defined as the expected returns (*expected G_t*) starting at the state *s_t* following a policy *π_θ*. The updated formula for updating the policy parameters is as follows:
 
 ![RL with Baseline formula](/readme_media/baseline_formula.jpg)
 
-In order to calculate *V(s_t)* we need to make a small change to our policy network: instead of having a single output for the action, we will have 2 separate fully connected layers at the end; the `actor_head` calculates the action probabilities and the `critic_head` calculates the state value. The `select_action` method samples an action just like in regular REINFORCE, and all the rewards, actions and state values are stored in a buffer for each step in the lap attempt.
+In order to calculate *V(s_t)* we need to make a small change to our policy network: instead of having a single output, we will have 2 separate fully connected layers at the end; the `actor_head` calculates the action probabilities and the `critic_head` calculates the state value. The `select_action` method samples an action just like in regular REINFORCE, and all the rewards, actions and state values are stored in a buffer for each step in the lap attempt.
 
 After completing the lap attempt and updating the running reward, we proceed to update the policy parameters following the formula described above by using our stored values in the buffer, similarly to the REINFORCE implementation.
 
 REINFORCE with Baseline is an easy method to implement because it only requires small modifications to REINFORCE and it also shows good results with fewer lap attempts.
 
-### Proximal Policy Optimization (PPO)
+## Proximal Policy Optimization (PPO)
 
 The final method we implemented is Proximal Policy Optimization, a much more complex algorithm than the previous 2 while at the same time being a simplification of other even more complex methods.
 
-PPO tries to solve the 2 shortcomings of REINFORCE by allowing us to update the policy network multiple times in a single lap attempt as well as controlling the updates by comparing the results between the original policy and the updated policy with the purpose of both improving training rate and avoiding high variance and noise.
+PPO tries to solve the 2 shortcomings of REINFORCE by allowing us to update the policy network multiple times in a single lap attempt as well as controlling the updates by comparing the results between the original and the updated policies with the purpose of both improving training rate and avoiding high variance and noise.
 
 The formula for updating the policy parameters is much more elaborate:
 
@@ -137,38 +139,39 @@ There are 3 important components to this formula:
 * The *value function loss L^VF* could also be understood as the *critic loss* because it calculates the loss of the state value that the `critic_head` outputs. It's a simple mean squared error formula that we combine with the clip loss with a discount factor hyperparameter to bring both losses to the same order of magnitude.
 * Finally, the *entropy term S\[π_θ\](s_t)* is added in order to encourage exploring different policies and regulated with an additional discount factor hyperparameter.
 
-We start the algorithm by filling a *transition memory* that stores tuples that represent each step (or transition) when attempting a lap: state, chosen action probability, reward, state value and the next state returned by the environment. The memory is able to store more transitions that happen in a regular lap attempt, so we do as many lap attempts as necessary in order to fill the memory.
+We start the algorithm by filling a *transition memory* that stores tuples that represent each step (or transition) when attempting a lap: state, chosen action probability, reward, entropy, state value and the next state returned by the environment. The memory is able to store more transitions that happen in a regular lap attempt, so we do as many lap attempts as necessary in order to fill the memory.
 
 Once the memory is full, we compute a few additional values needed for the PPO formula and then proceed to the actual training steps:
 1. For K epochs do:
    1. For random mini_batch in transition memory:
       1. Compute PPO loss using the formula above.
-      2. Update the policy weights
+      2. Update the policy weights by backpropagating through the loss.
 2. Discard transition memory.
 
 And repeat for as many episodes as needed.
 
 PPO took by far the longest time of all 3 methods to implement and we stalled many times due to debugging issues, with unsatisfactory results. We have been testing our implementation as late as the weekend before the day of our defense presentation.
 
-## Experiment results
+# Development history and milestones
 
-### REINFORCE (Vanilla Policy Gradient)
-#### Hypothesis
-#### Experiment Setup
-#### Results
-#### Conclusions
+## Milestone #1: REINFORCE implementation
 
-### REINFORCE with Baseline
-#### Hypothesis
-#### Experiment Setup
-#### Results
-#### Conclusions
+Our first milestone was reached when we managed to complete the REINFORCE implementation and start running experiments. Xavi was already familiar with GitHub and taught the rest of us how to work with git and create pull requests to incorporate features and we all tried to figure out how the REINFORCE algorithm works and how to implement it.
 
-### Proximal Policy Optimization (PPO)
-#### Hypothesis
-#### Experiment Setup
-#### Results
-#### Conclusions
+However, we stumbled with our implementation due to both theory misunderstandings and code bugs. Xavi also found a memory leak in one of OpenAI's Gym libraries which caused our experiments to run out of memory, so we were forced us to fork them and fix them in order to successfully run them.
+
+We managed to get one run with 
+
+
+
+# Experiment results
+## Method
+### Hypothesis
+### Experiment Setup
+### Results
+### Conclusions
+
+
 
 ## Pending stuff
 
