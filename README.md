@@ -111,19 +111,44 @@ The REINFORCE algorithm is easy to implement but has 2 big shortcomings:
 
 ### REINFORCE with Baseline
 
-REINFORCE with Baseline adds a *baseline* variable to the objective formula in order to attempt to reduce the high variance issue. A good baseline variable is the *state value function V(s_t)*, which is defined as the expected returns (*expected G_t*) given a state following a policy *π_θ*. The updated formula for updating the policy parameters is as follows:
+REINFORCE with Baseline adds a *baseline* variable to the objective formula in order to attempt to reduce the high variance issue. A good baseline variable is the *state value function V(s_t)*, which is defined as the expected returns (*expected G_t*) starting at the state *s_t* following a policy *π_θ*. The updated formula for updating the policy parameters is as follows:
 
 ![RL with Baseline formula](/readme_media/baseline_formula.jpg)
 
-In order to calculate *V(s_t)* we need to make a small change to our policy network: instead of having a single output for the action, we will have 2 separate fully connected layers at the end; the *actor head* calculates the action probabilities and the *critic head* calculates the state value. The `select_action` method samples an action just like in regular REINFORCE, and all the rewards, actions and state values are stored in a buffer for each step in the lap attempt.
+In order to calculate *V(s_t)* we need to make a small change to our policy network: instead of having a single output for the action, we will have 2 separate fully connected layers at the end; the `actor_head` calculates the action probabilities and the `critic_head` calculates the state value. The `select_action` method samples an action just like in regular REINFORCE, and all the rewards, actions and state values are stored in a buffer for each step in the lap attempt.
 
-After completing the lap attempt and updating the running reward, we proceed to update the policy parameters following the formula described above.
+After completing the lap attempt and updating the running reward, we proceed to update the policy parameters following the formula described above by using our stored values in the buffer, similarly to the REINFORCE implementation.
 
 REINFORCE with Baseline is an easy method to implement because it only requires small modifications to REINFORCE and it also shows good results with fewer lap attempts.
 
 ### Proximal Policy Optimization (PPO)
 
-The final method we implemented is Proximal Policy Optimization, a much more complex algorithm than the previous 2. 
+The final method we implemented is Proximal Policy Optimization, a much more complex algorithm than the previous 2 while at the same time being a simplification of other even more complex methods.
+
+PPO tries to solve the 2 shortcomings of REINFORCE by allowing us to update the policy network multiple times in a single lap attempt as well as controlling the updates by comparing the results between the original policy and the updated policy with the purpose of both improving training rate and avoiding high variance and noise.
+
+The formula for updating the policy parameters is much more elaborate:
+
+![PPO formula](/readme_media/ppoformula.jpg)
+
+There are 3 important components to this formula:
+
+* The *clip loss L^CLIP* controls the policy update by limiting the update rate: if a good action is likelier under the new policy or if a bad action is likelier under the old policy, we limit the amount of credit that the new policy gets, thus making it more "pessimistic" and forcing the model to take more cautionary learning steps. It could also be understood as the *actor loss*, because it deals with the loss of the `actor_head` of our policy network.
+* The *value function loss L^VF* could also be understood as the *critic loss* because it calculates the loss of the state value that the `critic_head` outputs. It's a simple mean squared error formula that we combine with the clip loss with a discount factor hyperparameter to bring both losses to the same order of magnitude.
+* Finally, the *entropy term S\[π_θ\](s_t)* is added in order to encourage exploring different policies and regulated with an additional discount factor hyperparameter.
+
+We start the algorithm by filling a *transition memory* that stores tuples that represent each step (or transition) when attempting a lap: state, chosen action probability, reward, state value and the next state returned by the environment. The memory is able to store more transitions that happen in a regular lap attempt, so we do as many lap attempts as necessary in order to fill the memory.
+
+Once the memory is full, we compute a few additional values needed for the PPO formula and then proceed to the actual training steps:
+1. For K epochs do:
+   1. For random mini_batch in transition memory:
+      1. Compute PPO loss using the formula above.
+      2. Update the policy weights
+2. Discard transition memory.
+
+And repeat for as many episodes as needed.
+
+PPO took by far the longest time of all 3 methods to implement and we stalled many times due to debugging issues, with unsatisfactory results. We have been testing our implementation as late as the weekend before the day of our defense presentation.
 
 ## Experiment results
 
@@ -147,4 +172,8 @@ The final method we implemented is Proximal Policy Optimization, a much more com
 
 ## Pending stuff
 
-## References
+## References and notes
+
+* [Juanjo Nieto's *Policy Gradient Methods* slides](https://docs.google.com/presentation/d/1LKe3pLUIphKDytIuYF8LnM23trjHoWoAw22rDT4kCrs/edit)
+* [Víctor Campos' *Policy Gradients & Actor-Critic methods* slides](https://docs.google.com/presentation/d/1LBcfpJsOZlb5337-x2nqwqm0boay00HQELHlA-moUs8/edit)
+* [OpenAI's *Proximal Policy Optimization Algorithms* paper](https://arxiv.org/pdf/1707.06347.pdf)
