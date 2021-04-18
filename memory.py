@@ -1,15 +1,24 @@
 from collections import namedtuple
 import random
+import numpy as np
+from torch.utils.data import Dataset
 
 Transition = namedtuple(
-    'Transition', ('state', 'action', 'next_state', 'reward'))
+    'Transition', ('state', 'action', 'log_prob', 'entropy', 'reward', 'vs_t', 'next_state'))
 
 
-class ReplayMemory(object):
+class ReplayMemory(Dataset):
     def __init__(self, capacity):
+        self.memory = np.empty(capacity, dtype=Transition)
         self.capacity = capacity
-        self.memory = []
+        # Used for push
         self.position = 0
+
+    def __len__(self):
+        return len(self.memory)
+
+    def __getitem__(self, idx):
+        return self.memory[idx]
 
     def push(self, *args):
         """Saves a transition."""
@@ -18,8 +27,3 @@ class ReplayMemory(object):
         self.memory[self.position] = Transition(*args)
         self.position = (self.position + 1) % self.capacity
 
-    def sample(self, batch_size):
-        return random.sample(self.memory, batch_size)
-
-    def __len__(self):
-        return len(self.memory)

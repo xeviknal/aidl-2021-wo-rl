@@ -82,7 +82,7 @@ OpenAI Gym is a popular framework for training Reinforcement Learning models. Gy
 
 The Car Racing environment outputs a ***state*** consisting on a 96x96 RGB image that displays the car and the track from a top-down view, as well as an additional black bar at the bottom of the image which contains various car sensor info. The environment expects an ***action*** input which consists of an array with 3 floating point numbers which represent turning direction (from -1 to 1, representing left to right), throttle (from 0 to 1, representing no throttle to full throttle) and brake (from 0 to 1 too, representing no brake to full brakes) inputs for the car to take. After receiving the action, the environment will return a ***reward*** as well as a new ***state*** consisting of an updated image that reflects the updated position of the car in the track. The environment will also output a *done* boolean value that will be `True` when the car finishes a lap or when it drives outside of the boundaries of the environment.
 
-The default reward is a floating point value that may be positive or negative depending on the performance of the car on the track. The reward is -0.1 every frame and +1000/N for every track tile visited, where N is the total number of tiles visited in the track. For example, if you have finished the track in 732 frames, the reward will be 1000 - 0.1 * 732 = 926.8 points. The task is considered finished when the agent consistently gets more than 900 points, but the definition of "consistently" is undefined by the environment and it's left for the developer to define it when implementing a solution.
+The default reward is a floating point value that may be positive or negative depending on the performance of the car on the track. The reward is `-0.1` every frame and `+1000/N` for every track tile visited, where N is the total number of tiles visited in the track. For example, if you have finished the track in 732 frames, the reward will be 1000 - 0.1 * 732 = 926.8 points. The task is considered finished when the agent consistently gets more than 900 points, but the definition of "consistently" is undefined by the environment and it's left for the developer to define it when implementing a solution.
 
 The Car Racing environment features a physics model that affects the behaviour of the car. The car has rear-wheel propulsion and has very high acceleration, which makes it very easy for the car to oversteer and drift, making it very hard for a human player to regain control once the car starts skidding.
 
@@ -129,7 +129,7 @@ For policy-based methods, there are 2 important functions:
 * The **Return G_t** function is a function that calculates the future reward starting from a timestep *t*. It can be thought of as the sum of all rewards starting from timestep *t+1* up to a final timestep *T*. In scenarios where it's impossible to know what the value of the final timestep *T* will be, a *discount rate ɣ* is applied to each additional timestep, so that the final value of *G_t* will always be finite. The discount rate is also useful if we want to solve our task in the least amount of steps possible.
 * The **Objective J(θ)** function returns the **expected** value of *G_t* given a set of parameters *θ* from our *policy* (our deep neural network). The goal of policy-based RL is to find a good *J(θ)* function that allows us to **predict** the optimal reward for our task.
 
-By estimating the gradient of *J(θ)* with respect to each policy parameter, we can then use stochastic gradient ascend and backpropagation to update the parameters and train the policy, like this:
+By estimating the gradient of *J(θ)* with respect to each policy parameter, we can then use stochastic gradient ascent and backpropagation to update the parameters and train the policy, like this:
 
 ![](/readme_media/RLformula.jpg)
 
@@ -199,7 +199,7 @@ Once the memory is full, we compute a few additional values needed for the PPO f
 
 And repeat for as many episodes as needed.
 
-PPO took by far the longest time of all 3 methods to implement and we stalled many times due to debugging issues, with unsatisfactory results. We have been testing our implementation as late as the weekend before the day of our defense presentation.
+PPO took by far the longest time of all 3 methods to implement and we stalled many times due to debugging issues, with unsatisfactory results. We have been testing our implementation as late as the weekend before the day of our project defense.
 
 # Development history and milestones
 
@@ -267,7 +267,7 @@ The PPO implementation was plagued with difficulties. We had a hard time underst
 
 The PPO implementation brought along a substantial amount of new hyperparameters (c1 and c2 coefficients, epsilon, transition memory and minibatch size, miniepoch size) which made finding good results much more difficult than expected. We considered changing the environment rewards with additional wrappers (increase penalty on grass) to check if we could improve our results because we were uncertain that our implementation was correct.
 
-At the current state, we don't consider our implementation to be finished and further work is required in order to achieve satisfactory results during training. Thus, we consider that Car Racing environment has **NOT** been solved with our PPO implementation.
+At the current state, we don't consider our implementation to be finished and further work is required in order to achieve satisfactory results during training. Thus, we consider that Car Racing environment has ***NOT*** been solved with our PPO implementation.
 
 Our initial experiments reflect our disappointment with our implementation:
 1. [First experiment](https://github.com/xeviknal/aidl-2021-wo-rl/pull/49).
