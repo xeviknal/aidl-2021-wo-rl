@@ -18,6 +18,7 @@ class Runner:
         super().__init__()
         self.env = env
         self.config = config
+        self.experiment = config['experiment']
         self.build_heatmap = config['heatmap']
         self.input_channels = config['stack_frames']
         self.action_set = get_action(config['action_set_num'])
@@ -48,12 +49,12 @@ class Runner:
         plt.close()
 
     def compose_heatmap(self):
-        os.system("ffmpeg -y -r 50 -i ./heatmap/heatmap_%01d.png -vcodec mpeg4 ./heatmap/heatmap.mp4")
-        os.system("ffmpeg -y -i ./heatmap/heatmap.mp4 -vf scale=600:400 -strict -2 ./heatmap/heatmap_scale.mp4")
-        os.system("ffmpeg -y -i ./video/openaigym.*.mp4 -i ./heatmap/heatmap_scale.mp4 -filter_complex hstack ./video/car_and_heatmap.mp4")
+        os.system(f'ffmpeg -y -r 50 -i ./heatmap/heatmap_%01d.png -vcodec mpeg4 ./heatmap/heatmap-{self.experiment}.mp4')
+        os.system(f'ffmpeg -y -i ./heatmap/heatmap-{self.experiment}.mp4 -vf scale=600:400 -strict -2 ' f'./heatmap/heatmap_scale-{self.experiment}.mp4')
+        os.system(f'ffmpeg -y -i ./video/openaigym.*.mp4 -i ./heatmap/heatmap_scale-{self.experiment}.mp4 ' f'-filter_complex hstack ./video/car_and_heatmap-{self.experiment}.mp4')
         print('####################################################################################')
         print('In case the previous `ffmpeg` commands didnt work, please execute the following:')
-        print("ffmpeg -y -i ./video/openaigym.*.mp4 -i ./heatmap/heatmap_scale.mp4 -filter_complex hstack ./video/car_and_heatmap.mp4")
+        print(f'ffmpeg -y -i ./video/openaigym.*.mp4 -i ./heatmap/heatmap_scale-{self.experiment}.mp4 ' f'-filter_complex hstack ./video/car_and_heatmap-{self.experiment}.mp4')
         print('####################################################################################')
 
     def run(self):
