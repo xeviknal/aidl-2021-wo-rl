@@ -75,7 +75,7 @@ OpenAI Gym is a popular framework for training Reinforcement Learning models. Gy
 
 The Car Racing environment outputs a ***state*** consisting on a 96x96 RGB image that displays the car and the track from a top-down view, as well as an additional black bar at the bottom of the image which contains various car sensor info. The environment expects an ***action*** input which consists of an array with 3 floating point numbers which represent turning direction (from -1 to 1, representing left to right), throttle (from 0 to 1, representing no throttle to full throttle) and brake (from 0 to 1 too, representing no brake to full brakes) inputs for the car to take. After receiving the action, the environment will return a ***reward*** as well as a new ***state*** consisting of an updated image that reflects the updated position of the car in the track. The environment will also output a *done* boolean value that will be `True` when the car finishes a lap or when it drives outside of the boundaries of the environment.
 
-The default reward is a floating point value that may be positive or negative depending on the performance of the car on the track. The reward is -0.1 every frame and +1000/N for every track tile visited, where N is the total number of tiles visited in the track. For example, if you have finished the track in 732 frames, the reward will be 1000 - 0.1 * 732 = 926.8 points. The task is considered finished when the agent consistently gets more than 900 points, but the definition of "consistently" is undefined by the environment and it's left for the developer to define it when implementing a solution.
+The default reward is a floating point value that may be positive or negative depending on the performance of the car on the track. The reward is `-0.1` every frame and `+1000/N` for every track tile visited, where N is the total number of tiles visited in the track. For example, if you have finished the track in 732 frames, the reward will be 1000 - 0.1 * 732 = 926.8 points. The task is considered finished when the agent consistently gets more than 900 points, but the definition of "consistently" is undefined by the environment and it's left for the developer to define it when implementing a solution.
 
 The Car Racing environment features a physics model that affects the behaviour of the car. The car has rear-wheel propulsion and has very high acceleration, which makes it very easy for the car to oversteer and drift, making it very hard for a human player to regain control once the car starts skidding.
 
@@ -122,7 +122,7 @@ For policy-based methods, there are 2 important functions:
 * The **Return G_t** function is a function that calculates the future reward starting from a timestep *t*. It can be thought of as the sum of all rewards starting from timestep *t+1* up to a final timestep *T*. In scenarios where it's impossible to know what the value of the final timestep *T* will be, a *discount rate ɣ* is applied to each additional timestep, so that the final value of *G_t* will always be finite. The discount rate is also useful if we want to solve our task in the least amount of steps possible.
 * The **Objective J(θ)** function returns the **expected** value of *G_t* given a set of parameters *θ* from our *policy* (our deep neural network). The goal of polic-based RL is to find a good *J(θ)* function that allows us to **predict** the optimal reward for our task.
 
-By estimating the gradient of *J(θ)* with respect to each policy parameter, we can then use stochastic gradient ascend and backpropagation to update the parameters and train the policy, like this:
+By estimating the gradient of *J(θ)* with respect to each policy parameter, we can then use stochastic gradient ascent and backpropagation to update the parameters and train the policy, like this:
 
 ![](/readme_media/RLformula.jpg)
 
@@ -192,7 +192,7 @@ Once the memory is full, we compute a few additional values needed for the PPO f
 
 And repeat for as many episodes as needed.
 
-PPO took by far the longest time of all 3 methods to implement and we stalled many times due to debugging issues, with unsatisfactory results. We have been testing our implementation as late as the weekend before the day of our defense presentation.
+PPO took by far the longest time of all 3 methods to implement and we stalled many times due to debugging issues, with unsatisfactory results. We have been testing our implementation as late as the weekend before the day of our project defense.
 
 # Development history and milestones
 
@@ -200,7 +200,7 @@ PPO took by far the longest time of all 3 methods to implement and we stalled ma
 
 Our first milestone was reached when we managed to complete the REINFORCE implementation and start running experiments. Xavi was already familiar with GitHub and taught the rest of us how to work with git and create pull requests to incorporate features and we all tried to figure out how the REINFORCE algorithm works and how to implement it.
 
-However, we stumbled with our implementation due to both theory misunderstandings and code bugs. Xavi also found a memory leak in one of OpenAI's Gym libraries which caused our experiments to run out of memory, so we were forced us to fork them and fix them in order to successfully run them.
+However, we stumbled with our implementation due to both theory misunderstandings and code bugs. Xavi also found a memory leak in one of OpenAI's Gym libraries which caused our experiments to run out of memory, so we were forced to fork them and fix them in order to successfully run them.
 
 We expected to have very slow training but we encountered no training at all. Early on we had a run which managed to get good results but we hadn't yet implemented random seed presetting and we could not replicate the experiment. We started adding variables to TensorBoard to study what was happening and we discovered that the network entropy was collapsing very quickly.
 
@@ -213,7 +213,7 @@ Implementing REINFORCE with Baseline turned out to be one of the most productive
 * We discovered a fundamental mistake in the way we were dealing with action probabilities and calculating the fina loss. We managed to fix in [in this commit](https://github.com/xeviknal/aidl-2021-wo-rl/commit/907af7a8043a6b540111ea4c833a2cae0a69c23d). Surprisingly, the good results we had gotten initially in the early lucky REINFORCE run had been done with a LogSoftmax final activation function rather than a regular Softmax; we still do not understand how it managed to train.
 * After some input from Juanjo, we realized that the set of discrete actions we had initially chosen was far from ideal, because we had not given it enough thought. We decided to create different action sets, each one with varying levels of granularization.
 * Again, after some input from Juanjo, we discovered a small difference in the code he had managed to run and get good results: the learning rate. We had mindlessly chosen a learning rate of 0.01 instead of the more usual 0.001, which had an enormous impact on our results: we went from barely managing a running reward of 30 after 24k episodes to running rewards close to 700 in less than 5k episodes.
-* We greatly improved our logging process. Sadly we lost the early results from the first milestone due to very big log files and GitHub issues and limitations; with the improvements we could now upload both network parameters and logs for each run and sotre them in separate branches for ease of comparison.
+* We greatly improved our logging process. Sadly we lost the early results from the first milestone due to very big log files and GitHub issues and limitations; with the improvements we could now upload both network parameters and logs for each run and store them in separate branches for ease of comparison.
 
 After the great improvements, we could finally start running some experiments both with REINFORCE with Baseline as well as with BASELINE.
 
@@ -260,7 +260,7 @@ The PPO implementation was plagued with difficulties. We had a hard time underst
 
 The PPO implementation brought along a substantial amount of new hyperparameters (c1 and c2 coefficients, epsilon, transition memory and minibatch size, miniepoch size) which made finding good results much more difficult than expected. We considered changing the environment rewards with additional wrappers (increase penalty on grass) to check if we could improve our results because we were uncertain that our implementation was correct.
 
-At the current state, we don't consider our implementation to be finished and further work is required in order to achieve satisfactory results during training. Thus, we consider that Car Racing environment has **NOT** been solved with our PPO implementation.
+At the current state, we don't consider our implementation to be finished and further work is required in order to achieve satisfactory results during training. Thus, we consider that Car Racing environment has ***NOT*** been solved with our PPO implementation.
 
 Our initial experiments reflect our disappointment with our implementation:
 1. [First experiment](https://github.com/xeviknal/aidl-2021-wo-rl/pull/49).
