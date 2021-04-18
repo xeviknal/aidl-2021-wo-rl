@@ -27,7 +27,8 @@ In the end the original goal was too ambitious and the project ended up divided 
     * `--experiment EXPERIMENT` : name of your experiment, which will be used to name your policy parameters and TensorBoard logging tags. Default value is `default` .
     * `--strategy STRATEGY` : strategy to follow for training. Available strategies are `vpg`, `baseline` and `ppo`. Default value is `vpg`.
     * `--log_interval INTERVAL` : checkpoint frequency for saving the policy parameters. Default value is `50` episodes.
-    * `--record RECORD` : if `True`, the model will generate a random track and record a video with a single lap attempt with your saved parameters. The video will be stored inside the `video` folder. Default value is `False`.
+    * `--record RECORD` : if `true`, the model will generate a random track and record a video with a single lap attempt with your saved parameters. The video will be stored inside the `video` folder. Default value is `false`.
+    * `--heatmap HEATMAP`: generates a heatmap of the action probabilities (it works only with `record=True`). Default value is `false`.
     * `--epochs EPOCHS` : number of training epochs. Default value is `2500`.
     * `--lr RATE` : learning rate. Default value is `0.001`.
     * `--gamma GAMMA` : discount factor for the rewards. Default value is `0.99`.
@@ -38,6 +39,10 @@ In the end the original goal was too ambitious and the project ended up divided 
     * `--ppo_epsilon EPSILON`: epsilon ratio hyperparameter (only for PPO strategy). Default value is `0.2`.
     * `--ppo_value_coeff COEFF`: value function coefficient hyperparameter (only for PPO strategy). Default value is `1.`.
     * `--ppo_entropy_coeff`: entropy coefficient hyperparameter (only for PPO strategy). Default value is `0.01`.
+
+Here are a couple of example executions:
+*  `python main.py --strategy ppo --epochs 10000 --log_interval 50 --experiment my_experiment --ppo_value_coeff 1.5 --ppo_entropy_coeff 0.05 --ppo_epochs 4` : trains 10k episodes with PPO strategy, with checkpoints every 50 episodes, 4 ppo epochs for every memory run and with modified ppo coefficients; the network parameters will be saved to `params/my-experiment.dl` .
+* `python main.py --strategy vpg --experiment my_other_experiment --record true --heatmap true`: records a random run with an action probability heatmap using REINFORCE strategy and loading the network parameters from `params/my_other_experiment.dl` .
 
 # Used resources
 
@@ -294,6 +299,9 @@ All experiments are 20k episodes long with the same action set. Learning rate is
 For REINFORCE, we expected to need a very big amount of episodes in order to have any significant rewards due to the small learning rate (1e-5). Since our experiments were limited to 20k episodes and REINFORCE only trains once per episode, we did not expect to have very high reward values.
 
 ![REINFORCE results](/readme_media/vpg_final_results.jpg)
+1. [Seed 1 results](https://github.com/xeviknal/aidl-2021-wo-rl/pull/67)
+2. [Seed 2 results](https://github.com/xeviknal/aidl-2021-wo-rl/pull/52)
+3. [Seed 3 results](https://github.com/xeviknal/aidl-2021-wo-rl/pull/53)
 
 Surprisingly, the seed value 1000 showed good reward results before 5k episodes and finished the experiment with a running reward of 329.5. The other 2 experiments did not fare well and did not seem to converge at all even after 20k episodes. This leads us to conclude that REINFORCE is a very unstable algorithm that requires high entropy and lots of exploration; we were lucky enough that one of our chosen seeds provided good enough initial conditions to generate good results.
 
@@ -306,6 +314,9 @@ Here is a random lap attempt that our trained model managed to output.
 We expected to see much quicker training with REINFORCE with Baseline; that is, we would need fewer episodes than with REINFORCE. By predicting the expected return beforehand, we adjust the loss to reduce the variance, thus accelerating the convergence rate.
 
 ![REINFORCE with Baseline results](/readme_media/baseline_final_results.jpg)
+1. [Seed 1 results](https://github.com/xeviknal/aidl-2021-wo-rl/pull/57)
+2. [Seed 2 results](https://github.com/xeviknal/aidl-2021-wo-rl/pull/66)
+3. [Seed 3 results](https://github.com/xeviknal/aidl-2021-wo-rl/pull/58)
 
 Our results confirm our hypothesis: a reward higher than 600 was achieved by all 3 experiments around the episode mark 4000.
 
@@ -346,6 +357,7 @@ There are several features and experiments that we wanted to implement but did n
 * Continuous actions. We focused exclusively on discrete actions and perhaps implementing continuous actions would have helped us getting better results in our implementation.
 * Exploring reward modification even further, both for PPO and the rest of our implementations.
 * Using existing implementations. This would have allowed us to focus more on experimentation and finetuning rather than implementation.
+* Applying our code in a different environment, such as Rubén's robot maze environment.
 
 # References and notes
 
