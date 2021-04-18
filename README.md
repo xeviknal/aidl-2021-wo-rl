@@ -101,7 +101,7 @@ There is also the issue of defining what "consistently" means when trying to get
 
 For all of our experiments, the chosen optimizer was Adam, since it seems to be the default optimizer for pretty much any task. We did not experiment with additional optimizers.
 
-In order to simplify the code, we decided to have a discrete set of actions initially. The Car Racing environment accepts floating point values as input, which makes it possible to finetune the car driving experience by having continuous action values, but discrete separate actions allows us to understand the environment better by letting us experiment with the action values and simplifies the code by not having to calculate the additional probability distributions needed to calculate the continuous values. Our goal was to code continuous values as a later feature in order to compare experiments but unfortunately we did not have the time to do so.
+In order to simplify the code, we decided to have a discrete set of actions initially. The Car Racing environment accepts floating point values as input, which makes it possible to fine-tune the car driving experience by having continuous action values, but discrete separate actions allows us to understand the environment better by letting us experiment with the action values and simplifies the code by not having to calculate the additional probability distributions needed to calculate the continuous values. Our goal was to code continuous values as a later feature in order to compare experiments but unfortunately we did not have the time to do so.
 
 # Deep neural network
 
@@ -109,7 +109,7 @@ The next step is defining a deep neural network architecture that can process th
 
 As previously said, the Car Racing environment outputs a state that consists of a 96x96 pixel RGB image. The obvious choice then is to use some sort of model based on convolutional layers to extract the image features and work with them.
 
-The state is a very small image composed with very simple graphics with flat colors, so a complex network with dozens of layers isn't needed. We designed a very simple model with 3 convolutional layers intercalated with 3 pooling layers and 3 fully connected layers at the end.
+The state is a very small image composed with very simple graphics with flat colors, so a complex network with dozens of layers isn't needed. We designed a very simple model with 3 convolutional layers combined with 3 pooling layers and 3 fully connected layers at the end.
 
 ![Our model](/readme_media/policy.png)
 
@@ -127,7 +127,7 @@ The Car Racing environment and task are very simple: the possible actions that t
 
 For policy-based methods, there are 2 important functions:
 * The **Return G_t** function is a function that calculates the future reward starting from a timestep *t*. It can be thought of as the sum of all rewards starting from timestep *t+1* up to a final timestep *T*. In scenarios where it's impossible to know what the value of the final timestep *T* will be, a *discount rate ɣ* is applied to each additional timestep, so that the final value of *G_t* will always be finite. The discount rate is also useful if we want to solve our task in the least amount of steps possible.
-* The **Objective J(θ)** function returns the **expected** value of *G_t* given a set of parameters *θ* from our *policy* (our deep neural network). The goal of polic-based RL is to find a good *J(θ)* function that allows us to **predict** the optimal reward for our task.
+* The **Objective J(θ)** function returns the **expected** value of *G_t* given a set of parameters *θ* from our *policy* (our deep neural network). The goal of policy-based RL is to find a good *J(θ)* function that allows us to **predict** the optimal reward for our task.
 
 By estimating the gradient of *J(θ)* with respect to each policy parameter, we can then use stochastic gradient ascend and backpropagation to update the parameters and train the policy, like this:
 
@@ -137,7 +137,7 @@ Where *ɑ* is the *learning rate* that we use to regulate the learning "steps".
 
 In a way, the *J(θ)* function can be understood as an equivalent to the ***loss function*** of classic deep supervised learning.
 
-The main obstacle is that *G_t* relies on the results of the future timesteps and we cannot analitically calculate *J(θ)*, much less its derivative. Therefore, many different methods have been developed to approximate it. We have chosen to implement 3 of these methods, described below: *REINFORCE*, *REINFORCE with Baseline* and *Proximal Policy Optimization*.
+The main obstacle is that *G_t* relies on the results of the future timesteps and we cannot analytically calculate *J(θ)*, much less its derivative. Therefore, many different methods have been developed to approximate it. We have chosen to implement 3 of these methods, described below: *REINFORCE*, *REINFORCE with Baseline* and *Proximal Policy Optimization*.
 
 ## REINFORCE (Vanilla Policy Gradient)
 
@@ -167,7 +167,7 @@ In order to calculate *V(s_t)* we need to make a small change to our policy netw
 
 After completing the lap attempt and updating the running reward, we proceed to update the policy parameters following the formula described above by using our stored values in the buffer, similarly to the REINFORCE implementation.
 
-REINFORCE with Baseline is an easy method to implement because it only requires small modifications to REINFORCE and it also shows good results with fewer lap attempts.
+REINFORCE with Baseline is an easy method to implement because it only requires small modifications to REINFORCE and it also shows good results with fewer lap attempts. This is because our loss function definition has a baseline (variance) subtracted and, therefore, it is closer to convergence.
 
 ## Proximal Policy Optimization (PPO)
 
@@ -207,7 +207,7 @@ PPO took by far the longest time of all 3 methods to implement and we stalled ma
 
 Our first milestone was reached when we managed to complete the REINFORCE implementation and start running experiments. Xavi was already familiar with GitHub and taught the rest of us how to work with git and create pull requests to incorporate features and we all tried to figure out how the REINFORCE algorithm works and how to implement it.
 
-However, we stumbled with our implementation due to both theory misunderstandings and code bugs. Xavi also found a memory leak in one of OpenAI's Gym libraries which caused our experiments to run out of memory, so we were forced us to fork them and fix them in order to successfully run them.
+However, we stumbled with our implementation due to both theory misunderstandings and code bugs. Xavi also found a [memory leak in one of OpenAI's Gym libraries](https://github.com/xeviknal/gym/pull/1) which caused our experiments to run out of memory, so we were forced us to fork them and fix them in order to successfully run them.
 
 We expected to have very slow training but we encountered no training at all. Early on we had a run which managed to get good results but we hadn't yet implemented random seed presetting and we could not replicate the experiment. We started adding variables to TensorBoard to study what was happening and we discovered that the network entropy was collapsing very quickly.
 
@@ -220,7 +220,7 @@ Implementing REINFORCE with Baseline turned out to be one of the most productive
 * We discovered a fundamental mistake in the way we were dealing with action probabilities and calculating the fina loss. We managed to fix in [in this commit](https://github.com/xeviknal/aidl-2021-wo-rl/commit/907af7a8043a6b540111ea4c833a2cae0a69c23d). Surprisingly, the good results we had gotten initially in the early lucky REINFORCE run had been done with a LogSoftmax final activation function rather than a regular Softmax; we still do not understand how it managed to train.
 * After some input from Juanjo, we realized that the set of discrete actions we had initially chosen was far from ideal, because we had not given it enough thought. We decided to create different action sets, each one with varying levels of granularization.
 * Again, after some input from Juanjo, we discovered a small difference in the code he had managed to run and get good results: the learning rate. We had mindlessly chosen a learning rate of 0.01 instead of the more usual 0.001, which had an enormous impact on our results: we went from barely managing a running reward of 30 after 24k episodes to running rewards close to 700 in less than 5k episodes.
-* We greatly improved our logging process. Sadly we lost the early results from the first milestone due to very big log files and GitHub issues and limitations; with the improvements we could now upload both network parameters and logs for each run and sotre them in separate branches for ease of comparison.
+* We greatly improved our logging process. Sadly we lost the early results from the first milestone due to very big log files and GitHub issues and limitations; with the improvements we could now upload both network parameters and logs for each run and store them in separate branches for ease of comparison.
 
 After the great improvements, we could finally start running some experiments both with REINFORCE with Baseline as well as with BASELINE.
 
@@ -245,7 +245,7 @@ After the great improvements, we could finally start running some experiments bo
    3. [Action set #2](https://github.com/xeviknal/aidl-2021-wo-rl/pull/46) had disappointing results.
    4. [Extra action set #4](https://github.com/xeviknal/aidl-2021-wo-rl/pull/47) had lower than expected rewards. The entropy never seemed to quasi-collapse as hard as in the other experiments but while it managed to get a peak running reward of nearly 450, it was much less than what the experiment with action set #0 showed.
 
-Parallelly, we also started experimenting again with REINFORCE in order to understand why the entropy was collapsing so hard. Due to the success of the learning rate and the known inestabilty of the algorithm, [we decided to experiment with different learning rate values](https://github.com/xeviknal/aidl-2021-wo-rl/pull/37). The results were spectacular and with a very small learning rate of 1*10^(-5) we managed to get running rewards of more than 800.
+In parallel, we also started experimenting again with REINFORCE in order to understand why the entropy was collapsing so hard. Due to the success of the learning rate and the known inestabilty of the algorithm, [we decided to experiment with different learning rate values](https://github.com/xeviknal/aidl-2021-wo-rl/pull/37). The results were spectacular and with a very small learning rate of 1*10^(-5) we managed to get running rewards of more than 800.
 
 After the varying results of the experiments with different actions, we also started analyzing what the actions were actually doing and how they impacted the results. By watching different results, we observed the following:
 * The model never learns how to brake.
@@ -302,7 +302,7 @@ We decided on 3 different seeds in order to get reproducible results and compare
 2. 1000 (the "boring" seed)
 3. 190421 (date of the project defense)
 
-All experiments are 20k episodes long with the same action set. Learning rate is 1e-3 for all strategies except for REINFORCE, for which we chose a learning rate of 1e-5 after our previous experiments. The action set adds braking during turns because we found it to be the best way to control speed during the lap attemps.
+All experiments are 20k episodes long with the same action set. Learning rate is 1e-3 for all strategies except for REINFORCE, for which we chose a learning rate of 1e-5 after our previous experiments. The action set adds braking during turns because we found it to be the best way to control speed during the lap attempts.
 
 ## REINFORCE
 
@@ -330,7 +330,7 @@ We expected to see much quicker training with REINFORCE with Baseline; that is, 
 
 Our results confirm our hypothesis: a reward higher than 600 was achieved by all 3 experiments around the episode mark 4000.
 
-We consider that the Car Racing environment can be solved with this algorithm by finetuning the action set even further.
+We consider that the Car Racing environment can be solved with this algorithm by fine-tuning the action set even further.
 
 Here is a random lap attempt that one of our trained models managed to output.
 
@@ -348,11 +348,11 @@ We did not run the final experiments as stated in our setup because we still cou
 
 # Conclusions and final thoughts
 
-This project has helped us understand the realities of Reinforcement Learning and the difficulties in finetuning hyperparameters in order to adjust a model to a specific task.
+This project has helped us understand the realities of Reinforcement Learning and the difficulties in fine-tuning hyperparameters in order to adjust a model to a specific task.
 
 Our main takeaways are:
 
-* Hyperparameters are crucial. Even a small adjustement can have huge implications in the results, as shown by our learning rate experiments.
+* Hyperparameters are crucial. Even a small adjustment can have huge implications in the results, as shown by our learning rate experiments.
 * Reinforcement Learning algorithms are complex and are expected to balance the need for exploring and finding clever ways to predict the reward and limit bad actions.
 * Reward design is also as important as algorithms and hyperparameters. A properly designed environment helps to speed up training by offering the proper incentives to the network that will lead it to choose the proper actions.
 * Action design also has a great impact in final results.
@@ -366,7 +366,7 @@ There are several features and experiments that we wanted to implement but did n
     * Our current implementation may be buggy or wrongly implemented.
 * Continuous actions. We focused exclusively on discrete actions and perhaps implementing continuous actions would have helped us getting better results in our implementation.
 * Exploring reward modification even further, both for PPO and the rest of our implementations.
-* Using existing implementations. This would have allowed us to focus more on experimentation and finetuning rather than implementation.
+* Using existing implementations. This would have allowed us to focus more on experimentation and fine-tuning rather than implementation.
 * Applying our code in a different environment, such as Rubén's robot maze environment.
 
 # References and notes
