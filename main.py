@@ -46,8 +46,8 @@ if __name__ == "__main__":
         'mini_batch_size': 128,
         'memory_size': 2000,
         'eps': 0.2,
-        'c1': tune.quniform(0.5, 2.5, 0.25),  # Value Function coeff
-        'c2': tune.quniform(0.00, 0.16, 0.02),  # Entropy coeff
+        'c1': tune.quniform(1.5, 2.5, 0.5),  # Value Function coeff
+        'c2': tune.quniform(0.00, 0.06, 0.02),  # Entropy coeff
         'lr': 1e-3,  # Learning rate
         'gamma': 0.99,  # Discount rate
         'log_interval': 10,  # controls how often we log progress
@@ -56,14 +56,14 @@ if __name__ == "__main__":
         'experiment': experiment,
         'action_set_num': 4,
         'train': True,
-        'seed': tune.grid_search([7081960, 1000, 190421])
+        'seed': 190421
     }
 
 analysis = tune.run(
     train,
     metric='running_reward',
     mode='max',
-    num_samples=18,
+    num_samples=3,
     resources_per_trial={"cpu": 0.4, "gpu": 0.3},
     config=hyperparams,
 )
