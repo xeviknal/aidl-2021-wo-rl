@@ -15,7 +15,7 @@ In the end the original goal was too ambitious and the project ended up divided 
 
 1. Clone the repo.
 2. Install the dependencies.
-   1. (Ubuntu 20.04) Run the `install.sh` script. It will install all deb dependencies as well as the Conda environment, and it will create a new virtual environment called `car-racing` in which all the pip dependencies listed in `requirements.txt` will be installed.
+   1. (Ubuntu 20.04) Run the `./install/install.sh` script. It will install all deb dependencies as well as the Conda environment, and it will create a new virtual environment called `car-racing` in which all the pip dependencies listed in `requirements.txt` will be installed.
    2. Alternatively, follow these steps in your system:
       1. Install the equivalent packages in your system: `build-essential` `wget` `swig` `gcc` `libjpeg-dev` `zlib1g-dev` `xvfb` `python-opengl` `ffmpeg` `xserver-xorg-core` `xorg-x11-server-Xvfb` `htop` .
       2. Install Conda from https://www.anaconda.com/products/individual#Downloads .
@@ -41,8 +41,15 @@ In the end the original goal was too ambitious and the project ended up divided 
     * `--ppo_entropy_coeff`: entropy coefficient hyperparameter (only for PPO strategy). Default value is `0.01`.
 
 Here are a couple of example executions:
-*  `python main.py --strategy ppo --epochs 10000 --log_interval 50 --experiment my_experiment --ppo_value_coeff 1.5 --ppo_entropy_coeff 0.05 --ppo_epochs 4` : trains 10k episodes with PPO strategy, with checkpoints every 50 episodes, 4 ppo epochs for every memory run and with modified ppo coefficients; the network parameters will be saved to `params/my-experiment.dl` .
-* `python main.py --strategy vpg --experiment my_other_experiment --record true --heatmap true`: records a random run with an action probability heatmap using REINFORCE strategy and loading the network parameters from `params/my_other_experiment.dl` .
+
+1. Training 10k episodes with PPO strategy, with checkpoints every 50 episodes, 4 ppo epochs for every memory run and with modified ppo coefficients; the network parameters will be saved to `params/policy-params-my-experiment-ppo.dl`.
+    ```bash
+    python main.py --strategy ppo --epochs 10000 --log_interval 50 --experiment my-experiment --ppo_value_coeff 1.5 --ppo_entropy_coeff 0.05 --ppo_epochs 4
+    ```
+2. Recording a random run with an action probability heatmap using REINFORCE strategy and loading the network parameters from `params/policy-params-my-other-experiment-vpg.dl`
+    ```bash
+    python main.py --strategy vpg --experiment my-other-experiment --record true --heatmap true
+    ```
 
 # Used resources
 
