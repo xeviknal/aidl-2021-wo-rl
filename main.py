@@ -18,8 +18,8 @@ if __name__ == "__main__":
         'mini_batch_size': 128,
         'memory_size': 2000,
         'eps': 0.2,
-        'c1': 1.,  # Value Function coeff
-        'c2': 0.01,  # Entropy coeff
+        'c1': 2.,  # Value Function coeff
+        'c2': 0.08,  # Entropy coeff
         'lr': 1e-3,  # Learning rate
         'gamma': 0.99,  # Discount rate
         'log_interval': 10,  # controls how often we log progress
