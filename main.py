@@ -13,6 +13,8 @@ parser.add_argument("--strategy", help="Name of the strategy to follow for train
                     default="vpg")
 parser.add_argument("--log_interval", help="Checkpoint frequency", type=int, default=50)
 parser.add_argument("--record", help="Runs the environment and records it", type=bool, default=False)
+parser.add_argument("--heatmap", help="Generates a heatmap of the action probs. (Works only with record=true)",
+                    type=bool, default=False)
 parser.add_argument("--epochs", help="Number of epochs to train", type=int, default=25000)
 parser.add_argument("--lr", help="Learning rate", type=float, default=0.001)
 parser.add_argument("--gamma", help="Discount factor", type=float, default=0.99)
@@ -41,6 +43,7 @@ if __name__ == "__main__":
         'log_interval': args.log_interval,  # controls how often we log progress
         'device': device,
         'train': not args.record,
+        'heatmap': args.heatmap,
         # Train management
         'num_epochs': args.epochs,  # Number of training episodes
         'num_episodes': args.epochs,  # Number of training episodes
