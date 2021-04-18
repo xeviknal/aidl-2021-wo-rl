@@ -39,6 +39,25 @@ In the end the original goal was too ambitious and the project ended up divided 
     * `--ppo_value_coeff COEFF`: value function coefficient hyperparameter (only for PPO strategy). Default value is `1.`.
     * `--ppo_entropy_coeff`: entropy coefficient hyperparameter (only for PPO strategy). Default value is `0.01`.
 
+# Used resources
+
+* Desktop PC #1.
+    * Intel Core i7-6700 @ 3.40GHz.
+    * 32GB RAM.
+    * NVIDIA GeForce GTX 1080, 8GB VRAM.
+* Laptop PC #1.
+    * Intel Core i7-6700HQ @ 2.6 GHz.
+    * 16GB RAM.
+    * NVIDIA GeForce GTX 1060, 8GB VRAM.
+* Laptop PC #2.
+    * Intel Core i7-860 @ 2.8GHz.
+    * 16GB RAM.
+    * NVIDIA GeForce GTX 970, 4GB VRAM.
+* Google Cloud instance.
+    * n1-highmem-2 (2 vCPUs).
+    * 13 GB memory.
+    * 1 x NVIDIA Tesla K80.
+
 # Reinforcement Learning and Car Racing
 
 Reinforcement Learning (RL) is a *computational approach to goal-directed learning form interaction that does not rely on expert supervision* [(quote)](https://mitpress.mit.edu/books/reinforcement-learning-second-edition). In other words, it's the branch of Machine Learning that tries to achieve a task by using an active agent that reads data from the environment and a "teacher" that gives an extrinsic reward to the model in order to teach it when it's doing well. The agent gets a ***state*** from the environment and performs an ***action*** on the environment, which is then either rewarded, punished or ignored; then the agent gets a new state and the cycle repeats.
@@ -248,12 +267,15 @@ We did not do further "formal" experiments since we do not fully understand the 
 
 We started to consider that the hyperparameters presented in the original PPO paper were only valid for their particular task, so we decided to change the `c1` coefficient which controls the value function loss. After changing it to `2.`, for the first time we started seeing positive rewards.
 
-* [Results after changing the c1 hyperparameter]().
+* [Results after changing the c1 hyperparameter](https://github.com/xeviknal/aidl-2021-wo-rl/pull/63).
 
 This made us realize that our approach to experimentation had been flawed and we needed to [implement proper hyperparameter tuning](https://github.com/xeviknal/aidl-2021-wo-rl/pull/54) tooling to our code in order to test different permutations of possible values. However, this realization was way too late and we could not successfully finish all the tests we wanted.
 
 Here are the results we could manage to get with our limited testing with hyperparameter tuning:
-1. [Results with basic environment]().
+1. Results with basic environment:
+    1. [1st experiment](https://github.com/xeviknal/aidl-2021-wo-rl/issues/65)
+    2. [2nd experiment](https://github.com/xeviknal/aidl-2021-wo-rl/pull/64)
+    3. [3rd experiment](https://github.com/xeviknal/aidl-2021-wo-rl/pull/54#issuecomment-822029279)
 2. [Results with additional wrappers]() (Early Stop and "Green Penalty", which adds negative rewards whenever the car steps on the grass).
 
 # Final experiments
@@ -265,28 +287,65 @@ We decided on 3 different seeds in order to get reproducible results and compare
 2. 1000 (the "boring" seed)
 3. 190421 (date of the project defense)
 
-All experiments are 20k episodes long with the same action set. Learning rate is 0.001 for all strategies except for REINFORCE, for which we chose a learning rate of 1e-5 after our previous experiments. The action set adds braking during turns because we found it to be the best way to control speed during the lap attemps.
+All experiments are 20k episodes long with the same action set. Learning rate is 1e-3 for all strategies except for REINFORCE, for which we chose a learning rate of 1e-5 after our previous experiments. The action set adds braking during turns because we found it to be the best way to control speed during the lap attemps.
 
 ## REINFORCE
 
-For REINFORCE, we expected very low rewards or perhaps small reward growth due to the small learning rate and the luck required to find a good seed that would lead to having good lap attempts.
+For REINFORCE, we expected to need a very big amount of episodes in order to have any significant rewards due to the small learning rate (1e-5). Since our experiments were limited to 20k episodes and REINFORCE only trains once per episode, we did not expect to have very high reward values.
 
-Surprisingly, the seed value 1000 showed good reward results before 5k episodes and finished the experiment with a running reward of 329.5. The other 2 experiments did not fare well and did not seem to converge at all even after 20k episodes.
+![REINFORCE results](/readme_media/vpg_final_results.jpg)
+
+Surprisingly, the seed value 1000 showed good reward results before 5k episodes and finished the experiment with a running reward of 329.5. The other 2 experiments did not fare well and did not seem to converge at all even after 20k episodes. This leads us to conclude that REINFORCE is a very unstable algorithm that requires high entropy and lots of exploration; we were lucky enough that one of our chosen seeds provided good enough initial conditions to generate good results.
+
+Here is a random lap attempt that our trained model managed to output.
+
+![REINFORCE lap attempt](/readme_media/vpg_video.gif)
 
 ## REINFORCE with Baseline
 
-We expected to see much quicker training with REINFORCE with Baseline and this experiment confirmed. In fact, we managed to get a running reward greater than 800 regularly.
+We expected to see much quicker training with REINFORCE with Baseline; that is, we would need fewer episodes than with REINFORCE. By predicting the expected return beforehand, we adjust the loss to reduce the variance, thus accelerating the convergence rate.
 
-We consider that the Car Racing environment can be solved with this algorithm by finetuning the action set even further and redefining the running reward formula to make it a little less punishing for bad episodes.
+![REINFORCE with Baseline results](/readme_media/baseline_final_results.jpg)
+
+Our results confirm our hypothesis: a reward higher than 600 was achieved by all 3 experiments around the episode mark 4000.
+
+We consider that the Car Racing environment can be solved with this algorithm by finetuning the action set even further.
+
+Here is a random lap attempt that one of our trained models managed to output.
+
+![Baseline lap attempt](/readme_media/baseline_video.gif)
 
 ## PPO
 
-(lol)
+We believe that the PPO method should train even faster than REINFORCE with Baseline; that is, with less episodes needed.  Our initial expectations were to reach the same reward values as REINFORCE with Baseline in fewer episodes.
+
+![PPO final results](/readme_media/ppo-final-results.jpg)
+
+We could not confirm our hypothesis with the current state of our hyperparameter tuning exploration.
+
+We did not run the final experiments as stated in our setup because we still could not find the proper tuning for the model to train and obtain positive rewards.
 
 # Conclusions and final thoughts
 
+This project has helped us understand the realities of Reinforcement Learning and the difficulties in finetuning hyperparameters in order to adjust a model to a specific task.
+
+Our main takeaways are:
+
+* Hyperparameters are crucial. Even a small adjustement can have huge implications in the results, as shown by our learning rate experiments.
+* Reinforcement Learning algorithms are complex and are expected to balance the need for exploring and finding clever ways to predict the reward and limit bad actions.
+* Reward design is also as important as algorithms and hyperparameters. A properly designed environment helps to speed up training by offering the proper incentives to the network that will lead it to choose the proper actions.
+* Action design also has a great impact in final results.
+* Being forced to complete lap attempts before training lengthens the training time.
+* Deep Neural Network architecture design has not been as much of a key issue as other aspects, most likely due to the simplicity of the environment states. While we have not explored this aspect as much as the others, the main showstoppers were the other key aspects commented above.
+
 There are several features and experiments that we wanted to implement but did not have the time for. In no particular order:
-* hipotesis a validar pel futur
+* Getting reliable training results with our PPO implementation.
+    * Does PPO overfit due to a high epoch number for each memory pass?
+    * Our hyperparameter tune search was not enough.
+    * Our current implementation may be buggy or wrongly implemented.
+* Continuous actions. We focused exclusively on discrete actions and perhaps implementing continuous actions would have helped us getting better results in our implementation.
+* Exploring reward modification even further, both for PPO and the rest of our implementations.
+* Using existing implementations. This would have allowed us to focus more on experimentation and finetuning rather than implementation.
 
 # References and notes
 
@@ -294,6 +353,4 @@ There are several features and experiments that we wanted to implement but did n
 * [Víctor Campos' *Policy Gradients & Actor-Critic methods* slides](https://docs.google.com/presentation/d/1LBcfpJsOZlb5337-x2nqwqm0boay00HQELHlA-moUs8/edit)
 * [OpenAI's *Proximal Policy Optimization Algorithms* paper](https://arxiv.org/pdf/1707.06347.pdf)
 * [Car Racing with PyTorch](https://github.com/xtma/pytorch_car_caring)
-
-# TODO
-* Añadir pull requests en apartado PPO
+* [2D Racing game using reinforcement learning and supervised learning](https://neuro.cs.ut.ee/wp-content/uploads/2018/02/2d_racing.pdf).
