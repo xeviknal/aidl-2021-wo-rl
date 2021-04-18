@@ -11,18 +11,33 @@ The original goal of the project was to train a self-driving model that would al
 
 In the end the original goal was too ambitious and the project ended up divided in 2 separate parts: the Gym part and the Robot part. This repo contains the Gym part; you may check out the robot part by visiting Rubén's repo at https://github.com/eldarsilver/DQN_Pytorch_ROS .
 
-# Running the code **(NEEDS TO BE REDONE)**
+# Running the code
 
 1. Clone the repo.
-2. Install the dependencies
+2. Install the dependencies.
    1. (Ubuntu 20.04) Run the `install.sh` script. It will install all deb dependencies as well as the Conda environment, and it will create a new virtual environment called `car-racing` in which all the pip dependencies listed in `requirements.txt` will be installed.
    2. Alternatively, follow these steps in your system:
-      1. Install the equivalent packages in your system: `build-essential` `wget` `swig` `gcc` `libjpeg-dev` `zlib1g-dev` `xvfb` `python-opengl` `ffmpeg` `xserver-xorg-core` `xorg-x11-server-Xvfb` `htop`
-      2. Install Conda from https://www.anaconda.com/products/individual#Downloads
-      3. Create a virtual environment with Conda: `conda create --name car-racing python=3.8`
-      4. Install the pip requirements: `pip install -r requirements.txt`
- 3. Open `main.py` and change the hyperparameters as needed.
- 4. Run `python main.py`
+      1. Install the equivalent packages in your system: `build-essential` `wget` `swig` `gcc` `libjpeg-dev` `zlib1g-dev` `xvfb` `python-opengl` `ffmpeg` `xserver-xorg-core` `xorg-x11-server-Xvfb` `htop` .
+      2. Install Conda from https://www.anaconda.com/products/individual#Downloads .
+      3. Create a virtual environment with Conda: `conda create --name car-racing python=3.8`.
+      4. Activate the environment: `conda activate car-racing` .
+      5. Install the pip requirements: `pip install -r requirements.txt`
+ 3. Run `python main.py` with the desired parameters for your experiment:
+    * `-h` , `--help` : shows the help messages for the parameters.
+    * `--experiment EXPERIMENT` : name of your experiment, which will be used to name your policy parameters and TensorBoard logging tags. Default value is `default` .
+    * `--strategy STRATEGY` : strategy to follow for training. Available strategies are `vpg`, `baseline` and `ppo`. Default value is `vpg`.
+    * `--log_interval INTERVAL` : checkpoint frequency for saving the policy parameters. Default value is `50` episodes.
+    * `--record RECORD` : if `True`, the model will generate a random track and record a video with a single lap attempt with your saved parameters. The video will be stored inside the `video` folder. Default value is `False`.
+    * `--epochs EPOCHS` : number of training epochs. Default value is `2500`.
+    * `--lr RATE` : learning rate. Default value is `0.001`.
+    * `--gamma GAMMA` : discount factor for the rewards. Default value is `0.99`.
+    * `--action_set SET` : the set of discrete actions to be used by the network. You may see the available actions by reading the `actions.py` file. Default value is `0`.
+    * `--ppo_epochs EPOCHS`: the `K` value, or number of proximal optimization epochs (only for PPO strategy; read below ). Default value is `10`.
+    * `--ppo_batch_size SIZE`: size for PPO minibatches (only for PPO strategy). Default value is `128`.
+    * `--ppo_memory_size SIZE`: size for PPO transition memory (only for PPO strategy). Default value is `2000`.
+    * `--ppo_epsilon EPSILON`: epsilon ratio hyperparameter (only for PPO strategy). Default value is `0.2`.
+    * `--ppo_value_coeff COEFF`: value function coefficient hyperparameter (only for PPO strategy). Default value is `1.`.
+    * `--ppo_entropy_coeff`: entropy coefficient hyperparameter (only for PPO strategy). Default value is `0.01`.
 
 # Reinforcement Learning and Car Racing
 
@@ -51,7 +66,7 @@ Before implementing any algorithm, however, we knew from our classes and from ad
 * FrameSkipper: an original wrapper; FrameSkipper allows us to "skip" frames: instead of choosing an action for each frame, we use the same action for all of the skipped frames. This allows us to reduce the amount of actions we need to calculate.
 * EarlyStop: an original wrapper; when used, the environment will output `done = True` in additional circunstances besides the default ones, such as getting a negative average reward. This allows us to stop the execution early and train with more episodes.
 
-***NEEDS REVIEW*** There is also the issue of defining what "consistently" means when trying to get a reward of "consistently more than 900 points". We settled on calculating a *running reward* that accumulates the previously obtained rewards and calculates an average of sorts that represents the reward you can expect from the model at a specific stage of training, which is calculated as `running_reward = 0.05 * episode_reward + (1 - 0.05) * running_reward`, where `episode_reward` is the reward we obtain for each lap attempt.
+There is also the issue of defining what "consistently" means when trying to get a reward of "consistently more than 900 points". We settled on calculating a *running reward* that accumulates the previously obtained rewards and calculates an average of sorts that represents the reward you can expect from the model at a specific stage of training, which is calculated as `running_reward = 0.05 * episode_reward + (1 - 0.05) * running_reward`, where `episode_reward` is the reward we obtain for each lap attempt.
 
 For all of our experiments, the chosen optimizer was Adam, since it seems to be the default optimizer for pretty much any task. We did not experiment with additional optimizers.
 
@@ -75,19 +90,19 @@ We experimented with different network configurations and we ended up with sligh
 
 There are many methods to do Reinforcement Learning, which can all be classified using different criteria. One of the most common criteria is whether a method is *value-based* or *policy-based*.
 
-A policy-based method maps the observations (*states*) that the agent obtains and maps them to *actions*, whereas a value-based method will output a measure of quality of each possible action. For example, if we're using a map application to find a route between 2 places, a policy-based method would output the best possible route, and a value-based method will output a value associated to all possible routes, such as estimated travel time.
+A policy-based method maps the observations (*states*) that the agent obtains and maps them to *actions*, whereas a value-based method will output a measure of quality of each possible action. For example, if we're using a map application to find a route between 2 places, a policy-based method would output the best possible route (or rather, a set of probabilities for all observable routes with the highest probability assigned to the best route), and a value-based method will output a calculated value for all possible routes, such as the estimated travel time for each route.
 
 The Car Racing environment and task are very simple: the possible actions that the car may take are limited and there are no instances of having to decide between multiple paths or any other complex scenarios which may need the model to decide between 2 equally valid actions. Thus, a policy-based method seems better suited for this task.
 
 For policy-based methods, there are 2 important functions:
-* The **Return G_t** function is a function that calculates the future reward starting from a timestep *t*. It can be thought of as the sum of all rewards starting from timestep *t+1* up to a final timestep *T*. In scenarios where it's impossible to know what the value of the final timestep *T* will be, a *discount rate ɣ* is applied to each additional timestep, so that the final value of *G_t* will always be finite.
-* The **Objective J(θ)** function returns the expected value of *G_t* given a set of parameters *θ* from our *policy* (our deep neural network).
+* The **Return G_t** function is a function that calculates the future reward starting from a timestep *t*. It can be thought of as the sum of all rewards starting from timestep *t+1* up to a final timestep *T*. In scenarios where it's impossible to know what the value of the final timestep *T* will be, a *discount rate ɣ* is applied to each additional timestep, so that the final value of *G_t* will always be finite. The discount rate is also useful if we want to solve our task in the least amount of steps possible.
+* The **Objective J(θ)** function returns the **expected** value of *G_t* given a set of parameters *θ* from our *policy* (our deep neural network). The goal of polic-based RL is to find a good *J(θ)* function that allows us to **predict** the optimal reward for our task.
 
 By estimating the gradient of *J(θ)* with respect to each policy parameter, we can then use stochastic gradient ascend and backpropagation to update the parameters and train the policy, like this:
 
 ![](/readme_media/RLformula.jpg)
 
-Where *ɑ* is the *learning rate* that we use to regulate the learning "jumps".
+Where *ɑ* is the *learning rate* that we use to regulate the learning "steps".
 
 In a way, the *J(θ)* function can be understood as an equivalent to the ***loss function*** of classic deep supervised learning.
 
@@ -125,9 +140,9 @@ REINFORCE with Baseline is an easy method to implement because it only requires 
 
 ## Proximal Policy Optimization (PPO)
 
-The final method we implemented is Proximal Policy Optimization, a much more complex algorithm than the previous 2 while at the same time being a simplification of other even more complex methods.
+The final method we implemented is Proximal Policy Optimization, a much more complex algorithm than the previous 2 while at the same time being a simplification of other even more complex methods such as Trust Region Policy Optimization.
 
-PPO tries to solve the 2 shortcomings of REINFORCE by allowing us to update the policy network multiple times in a single lap attempt as well as controlling the updates by comparing the results between the original and the updated policies with the purpose of both improving training rate and avoiding high variance and noise.
+PPO tries to solve the 2 shortcomings of REINFORCE by allowing us to update the policy network multiple times in a single lap attempt as well as controlling the updates by comparing the results between the original and the updated policies with the purpose of both improving training speed and avoiding high variance and noise.
 
 The formula for updating the policy parameters is much more elaborate:
 
@@ -137,16 +152,19 @@ There are 3 important components to this formula:
 
 * The *clip loss L^CLIP* controls the policy update by limiting the update rate: if a good action is likelier under the new policy or if a bad action is likelier under the old policy, we limit the amount of credit that the new policy gets, thus making it more "pessimistic" and forcing the model to take more cautionary learning steps. It could also be understood as the *actor loss*, because it deals with the loss of the `actor_head` of our policy network.
 * The *value function loss L^VF* could also be understood as the *critic loss* because it calculates the loss of the state value that the `critic_head` outputs. It's a simple mean squared error formula that we combine with the clip loss with a discount factor hyperparameter to bring both losses to the same order of magnitude.
-* Finally, the *entropy term S\[π_θ\](s_t)* is added in order to encourage exploring different policies and regulated with an additional discount factor hyperparameter.
+* Finally, the *entropy term S\[π_θ\](s_t)* is added in order to encourage exploring different policies and regulated with an additional discount factor hyperparameter. For our specific scenario, entropy is defined as the measurable uncertainty when choosing actions: high entropy means that the probabilities are simillar between actions, whereas low entropy means that there are clear differences between them which makes choosing a specific action obvious.
 
 We start the algorithm by filling a *transition memory* that stores tuples that represent each step (or transition) when attempting a lap: state, chosen action probability, reward, entropy, state value and the next state returned by the environment. The memory is able to store more transitions that happen in a regular lap attempt, so we do as many lap attempts as necessary in order to fill the memory.
 
 Once the memory is full, we compute a few additional values needed for the PPO formula and then proceed to the actual training steps:
+
+```
 1. For K epochs do:
    1. For random mini_batch in transition memory:
       1. Compute PPO loss using the formula above.
       2. Update the policy weights by backpropagating through the loss.
 2. Discard transition memory.
+```
 
 And repeat for as many episodes as needed.
 
@@ -166,11 +184,11 @@ We decided to move on to implementing REINFORCE with Baseline as a way to deal w
 
 ## Milestone #2: REINFORCE with Baseline and first insights
 
-Implementing REINFORCE with Baseline turned out to be one of the most productive tasks because it forced us to reevaluate many of our original design decisions:
+Implementing REINFORCE with Baseline turned out to be one of the most productive tasks in the project because it forced us to reevaluate many of our original design decisions:
 
 * We discovered a fundamental mistake in the way we were dealing with action probabilities and calculating the fina loss. We managed to fix in [in this commit](https://github.com/xeviknal/aidl-2021-wo-rl/commit/907af7a8043a6b540111ea4c833a2cae0a69c23d). Surprisingly, the good results we had gotten initially in the early lucky REINFORCE run had been done with a LogSoftmax final activation function rather than a regular Softmax; we still do not understand how it managed to train.
 * After some input from Juanjo, we realized that the set of discrete actions we had initially chosen was far from ideal, because we had not given it enough thought. We decided to create different action sets, each one with varying levels of granularization.
-* Again, after some input from Juanjo, we discovered a small difference in the code he had managed to run and get good results: the learning rate. We had mindlessly chosen a learning rate of 0.1 instead of the more usual 0.01, which had an enormous impact on our results: we went from barely managing a running reward of 30 after 24k episodes to running rewards close to 700 in less than 5k episodes.
+* Again, after some input from Juanjo, we discovered a small difference in the code he had managed to run and get good results: the learning rate. We had mindlessly chosen a learning rate of 0.01 instead of the more usual 0.001, which had an enormous impact on our results: we went from barely managing a running reward of 30 after 24k episodes to running rewards close to 700 in less than 5k episodes.
 * We greatly improved our logging process. Sadly we lost the early results from the first milestone due to very big log files and GitHub issues and limitations; with the improvements we could now upload both network parameters and logs for each run and sotre them in separate branches for ease of comparison.
 
 After the great improvements, we could finally start running some experiments both with REINFORCE with Baseline as well as with BASELINE.
@@ -210,28 +228,72 @@ Here are the things we learnt at this stage:
 * Hyperparameter tuning is crucial for Reinforcement Learning, as demonstrated by our learning rate experiments.
 * Rewards affects greatly to the action probabilities. The model never learns how to brake because the motivation to do so is missing.
 * We could "cheat" by designing an action set that limits the top speed of the car and induces actions that the model would otherwise never do, such as braking while turning.
-
-***TODO add entropy explanation***
+* We still do not fully understand the entropy behavior in certain experiments, but we believe that it could be due to our loss function being unable to find good exploration routes, perhaps due to algorithm instability or maybe due to the environment's reward design.
 
 # Milestone #3: PPO
 
+The PPO implementation was plagued with difficulties. We had a hard time understanding and decomposing the formula in simple steps that could easily translate to code. We also had many issues with debugging due to the backpropagation requirements of some of the elements in the formula, tensor reshaping issues, keeping track of what elements to store in the transition memory in order to avoid redundant calculations and subsequent data complexity management, understanding what values belonged to the old policy or the updated policy (such as computing the policy propbability ratio), etc.
+
+The PPO implementation brought along a substantial amount of new hyperparameters (c1 and c2 coefficients, epsilon, transition memory and minibatch size, miniepoch size) which made finding good results much more difficult than expected. We considered changing the environment rewards with additional wrappers (increase penalty on grass) to check if we could improve our results because we were uncertain that our implementation was correct.
+
+At the current state, we don't consider our implementation to be finished and further work is required in order to achieve satisfactory results during training. Thus, we consider that Car Racing environment has **NOT** been solved with our PPO implementation.
+
+Our initial experiments reflect our disappointment with our implementation:
+1. [First experiment](https://github.com/xeviknal/aidl-2021-wo-rl/pull/49).
+2. [Second experiment](https://github.com/xeviknal/aidl-2021-wo-rl/pull/50).
+
+We did not do further "formal" experiments since we do not fully understand the causes that lead to such poor results and as of the day previous to the project defense we are still undergoing preliminar testing and hyperparameter hypertuning. Some of these tests are reflected in our pull requests:
+1. [Testing the "early stop" wrapper](https://github.com/xeviknal/aidl-2021-wo-rl/pull/51) so that the lap attempt stops when the accumulated average reward of the latest 50 steps is negative. This wrapper forces the model to train in a style similar to Curriculum Learning.
+2. [Combination of different tests](https://github.com/xeviknal/aidl-2021-wo-rl/pull/55): the first and third experiments are setup similarly to the REINFORCE and Baseline experiments, the second one adds the Early Stop wrapper.
+
+We started to consider that the hyperparameters presented in the original PPO paper were only valid for their particular task, so we decided to change the `c1` coefficient which controls the value function loss. After changing it to `2.`, for the first time we started seeing positive rewards.
+
+* [Results after changing the c1 hyperparameter]().
+
+This made us realize that our approach to experimentation had been flawed and we needed to [implement proper hyperparameter tuning](https://github.com/xeviknal/aidl-2021-wo-rl/pull/54) tooling to our code in order to test different permutations of possible values. However, this realization was way too late and we could not successfully finish all the tests we wanted.
+
+Here are the results we could manage to get with our limited testing with hyperparameter tuning:
+1. [Results with basic environment]().
+2. [Results with additional wrappers]() (Early Stop and "Green Penalty", which adds negative rewards whenever the car steps on the grass).
+
 # Final experiments
-## Method
-### Hypothesis
-### Experiment Setup
-### Results
-### Conclusions
 
+In order to evaluate our final work, we decided to run a set of experiments that would confirm what we've learned during the course of the project.
 
+We decided on 3 different seeds in order to get reproducible results and compared our 3 implementations with all the seeds, for a total of 9 combinations. The seeds are:
+1. 7081960 (Yann LeCun's birthday)
+2. 1000 (the "boring" seed)
+3. 190421 (date of the project defense)
 
-## Pending stuff
+All experiments are 20k episodes long with the same action set. Learning rate is 0.001 for all strategies except for REINFORCE, for which we chose a learning rate of 1e-5 after our previous experiments. The action set adds braking during turns because we found it to be the best way to control speed during the lap attemps.
+
+## REINFORCE
+
+For REINFORCE, we expected very low rewards or perhaps small reward growth due to the small learning rate and the luck required to find a good seed that would lead to having good lap attempts.
+
+Surprisingly, the seed value 1000 showed good reward results before 5k episodes and finished the experiment with a running reward of 329.5. The other 2 experiments did not fare well and did not seem to converge at all even after 20k episodes.
+
+## REINFORCE with Baseline
+
+We expected to see much quicker training with REINFORCE with Baseline and this experiment confirmed. In fact, we managed to get a running reward greater than 800 regularly.
+
+We consider that the Car Racing environment can be solved with this algorithm by finetuning the action set even further and redefining the running reward formula to make it a little less punishing for bad episodes.
+
+## PPO
+
+(lol)
+
+# Conclusions and final thoughts
 
 There are several features and experiments that we wanted to implement but did not have the time for. In no particular order:
-* Create a new wrapper that modifies the rewards by having it return a negative reward when going outside the track or when a drift is detected, with the hopes that this would add an incentive for the model to learn how to brake before turns.
+* hipotesis a validar pel futur
 
-## References and notes
+# References and notes
 
 * [Juanjo Nieto's *Policy Gradient Methods* slides](https://docs.google.com/presentation/d/1LKe3pLUIphKDytIuYF8LnM23trjHoWoAw22rDT4kCrs/edit)
 * [Víctor Campos' *Policy Gradients & Actor-Critic methods* slides](https://docs.google.com/presentation/d/1LBcfpJsOZlb5337-x2nqwqm0boay00HQELHlA-moUs8/edit)
 * [OpenAI's *Proximal Policy Optimization Algorithms* paper](https://arxiv.org/pdf/1707.06347.pdf)
 * [Car Racing with PyTorch](https://github.com/xtma/pytorch_car_caring)
+
+# TODO
+* Añadir pull requests en apartado PPO
