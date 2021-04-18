@@ -49,9 +49,13 @@ class Runner:
         plt.close()
 
     def compose_heatmap(self):
-        os.system("ffmpeg -r 50 -i ./heatmap/heatmap_%01d.png -vcodec mpeg4 -y ./heatmap/heatmap.mp4")
-        os.system("ffmpeg -i ./heatmap/heatmap.mp4 -vf scale=600:400 -strict -2 ./heatmap/heatmap_scale.mp4")
-        os.system("ffmpeg -i ./video/*.mp4 -i ./heatmap/heatmap_scale.mp4 -filter_complex hstack ./video/car_and_heatmap.mp4")
+        os.system("ffmpeg -y -r 50 -i ./heatmap/heatmap_%01d.png -vcodec mpeg4 ./heatmap/heatmap.mp4")
+        os.system("ffmpeg -y -i ./heatmap/heatmap.mp4 -vf scale=600:400 -strict -2 ./heatmap/heatmap_scale.mp4")
+        os.system("ffmpeg -y -i ./video/openaigym.*.mp4 -i ./heatmap/heatmap_scale.mp4 -filter_complex hstack ./video/car_and_heatmap.mp4")
+        print('####################################################################################')
+        print('In case the previous `ffmpeg` commands didnt work, please execute the following:')
+        print("ffmpeg -y -i ./video/openaigym.*.mp4 -i ./heatmap/heatmap_scale.mp4 -filter_complex hstack ./video/car_and_heatmap.mp4")
+        print('####################################################################################')
 
     def run(self):
         if self.build_heatmap:
@@ -66,9 +70,9 @@ class Runner:
             if self.build_heatmap:
                 self.heatmap_build(i, probs)
             i += 1
+        self.env.close()
 
         if self.build_heatmap:
             self.compose_heatmap()
 
         print('Cumulative reward:', total_rew)
-        self.env.close()
