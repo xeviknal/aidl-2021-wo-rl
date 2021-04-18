@@ -65,7 +65,7 @@ Here are a couple of example executions:
 
 # Reinforcement Learning and Car Racing
 
-Reinforcement Learning (RL) is a *computational approach to goal-directed learning form interaction that does not rely on expert supervision* [(quote)](https://mitpress.mit.edu/books/reinforcement-learning-second-edition). In other words, it's the branch of Machine Learning that tries to achieve a task by using an active agent that reads data from the environment and a "teacher" that gives an extrinsic reward to the model in order to teach it when it's doing well. The agent gets a ***state*** from the environment and performs an ***action*** on the environment, which is then either rewarded, punished or ignored; then the agent gets a new state and the cycle repeats.
+Reinforcement Learning (RL) is a *computational approach to goal-directed learning from interaction that does not rely on expert supervision* [(quote)](https://mitpress.mit.edu/books/reinforcement-learning-second-edition). In other words, it's the branch of Machine Learning that tries to achieve a task by using an active agent that reads data from the environment and a "teacher" that gives an extrinsic reward to the model in order to teach it when it's doing well. The agent gets a ***state*** from the environment and performs an ***action*** on the environment, which is then either rewarded, punished or ignored; then the agent gets a new state and the cycle repeats.
 
 ![RL basic diagram](/readme_media/RL.jpg)
 
@@ -281,7 +281,10 @@ Here are the results we could manage to get with our limited testing with hyperp
     1. [1st experiment](https://github.com/xeviknal/aidl-2021-wo-rl/issues/65)
     2. [2nd experiment](https://github.com/xeviknal/aidl-2021-wo-rl/pull/64)
     3. [3rd experiment](https://github.com/xeviknal/aidl-2021-wo-rl/pull/54#issuecomment-822029279)
-2. [Results with additional wrappers]() (Early Stop and "Green Penalty", which adds negative rewards whenever the car steps on the grass).
+2. Results with additional wrappers (Early Stop and "Green Penalty", which adds negative rewards whenever the car steps on the grass).
+    1. [1st experiment](https://github.com/xeviknal/aidl-2021-wo-rl/pull/68#issuecomment-822040491).
+    2. [2nd experiment](https://github.com/xeviknal/aidl-2021-wo-rl/pull/68#issuecomment-822041526).
+    3. [3rd experiment](https://github.com/xeviknal/aidl-2021-wo-rl/pull/68#issuecomment-822047657).
 
 # Final experiments
 
