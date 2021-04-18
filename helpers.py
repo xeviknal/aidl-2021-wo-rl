@@ -1,11 +1,12 @@
-from pyvirtualdisplay import Display
-import torch
+import base64
 import glob
 import io
-import base64
 import os
-from IPython.display import HTML
+
+import torch
 from IPython import display as ipythondisplay
+from IPython.display import HTML
+from pyvirtualdisplay import Display
 
 
 def show_video():

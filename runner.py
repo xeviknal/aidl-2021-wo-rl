@@ -13,7 +13,6 @@ def build(strategy, env, hyper_params):
     _, policy_class = get_strategy_descriptor(strategy)
     return Runner(env, hyper_params, policy_class)
 
-
 class Runner:
     def __init__(self, env, config, policy_class):
         super().__init__()

@@ -1,8 +1,7 @@
-import torch
 import numpy as np
+import torch
 from torch.utils.tensorboard import SummaryWriter
 
-from policies.actor_policy import ActorPolicy
 from actions import get_action
 
 
