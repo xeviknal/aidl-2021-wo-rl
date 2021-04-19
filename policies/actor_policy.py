@@ -37,7 +37,8 @@ class ActorPolicy(nn.Module):
         running_reward = 10
         optim_params = None
         if path.exists(params_path):
-            params_descriptor = torch.load(params_path)
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            params_descriptor = torch.load(params_path, map_location=torch.device(device))
             epoch = 0
             running_reward = 0
             if 'params' in params_descriptor:

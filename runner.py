@@ -61,6 +61,7 @@ class Runner:
         if self.build_heatmap:
             helpers.create_directory('heatmap')
 
+        self.policy.eval()
         state, done, total_rew, i = self.env.reset(), False, 0, 0
         while not done:
             self.env.render()
