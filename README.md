@@ -109,7 +109,7 @@ The next step is defining a deep neural network architecture that can process th
 
 As previously said, the Car Racing environment outputs a state that consists of a 96x96 pixel RGB image. The obvious choice then is to use some sort of model based on convolutional layers to extract the image features and work with them.
 
-The state is a very small image composed with very simple graphics with flat colors, so a complex network with dozens of layers isn't needed. We designed a very simple model with 3 convolutional layers combined with 3 pooling layers and 3 fully connected layers at the end.
+The state is a very small image composed with very simple graphics with flat colors, so a complex network with dozens of layers isn't needed. We designed a very simple model with blocks made of convolutional layers combined with pooling layers and 3 fully connected layers at the end.
 
 ![Our model](/readme_media/policy.png)
 
@@ -205,7 +205,14 @@ PPO took by far the longest time of all 3 methods to implement and we stalled ma
 
 ## Milestone #1: REINFORCE implementation
 
-Our first milestone was reached when we managed to complete the REINFORCE implementation and start running experiments. Xavi was already familiar with GitHub and taught the rest of us how to work with git and create pull requests to incorporate features and we all tried to figure out how the REINFORCE algorithm works and how to implement it.
+Our first milestone was reached when we managed to complete the REINFORCE implementation and start running experiments.
+
+* Xavi taught us about git, GitHub, collaborative workflow and pull requests.
+* We experimented with Google Cloud instances but realized that with our local resources we could train as fast or even faster than with cloud instances, without the risk of running out of credits. We only used cloud instances near the end of the project.
+* We implemented the basic foundation of our code as well as most of the wrappers.
+* We designed our first policy network with 2 convolutional blocks.
+* We decided on TensorBoard for logging since we were already familiar with it thanks to our hands-on classes.
+* We implemented our first interpretability tool: a heatmap of action probabilities, which helped us visualize the policy's decisions during lap attempts.
 
 However, we stumbled with our implementation due to both theory misunderstandings and code bugs. Xavi also found a [memory leak in one of OpenAI's Gym libraries](https://github.com/xeviknal/gym/pull/1) which caused our experiments to run out of memory, so we were forced us to fork them and fix them in order to successfully run them.
 
@@ -218,6 +225,7 @@ We decided to move on to implementing REINFORCE with Baseline as a way to deal w
 Implementing REINFORCE with Baseline turned out to be one of the most productive tasks in the project because it forced us to reevaluate many of our original design decisions:
 
 * We discovered a fundamental mistake in the way we were dealing with action probabilities and calculating the fina loss. We managed to fix in [in this commit](https://github.com/xeviknal/aidl-2021-wo-rl/commit/907af7a8043a6b540111ea4c833a2cae0a69c23d). Surprisingly, the good results we had gotten initially in the early lucky REINFORCE run had been done with a LogSoftmax final activation function rather than a regular Softmax; we still do not understand how it managed to train.
+* We added an additional convolutional block to our policy network.
 * After some input from Juanjo, we realized that the set of discrete actions we had initially chosen was far from ideal, because we had not given it enough thought. We decided to create different action sets, each one with varying levels of granularization.
 * Again, after some input from Juanjo, we discovered a small difference in the code he had managed to run and get good results: the learning rate. We had mindlessly chosen a learning rate of 0.01 instead of the more usual 0.001, which had an enormous impact on our results: we went from barely managing a running reward of 30 after 24k episodes to running rewards close to 700 in less than 5k episodes.
 * We greatly improved our logging process. Sadly we lost the early results from the first milestone due to very big log files and GitHub issues and limitations; with the improvements we could now upload both network parameters and logs for each run and store them in separate branches for ease of comparison.
