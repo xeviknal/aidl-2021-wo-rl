@@ -27,13 +27,16 @@ def print_hyperparams(config):
     print('----------------------------------------')
     print("{:<15} {:<10}".format('Param', 'Value'))
     for label, value in config.items():
-        if label is not "device":
+        if label != "device":
             print("{:<15} {:<10}".format(label, value))
     print('----------------------------------------')
 
 
-def display_start():
-    display = Display(visible=0, size=(1400, 900))
+def display_start(record=False):
+    visible = 0
+    if record:
+        visible = 1
+    display = Display(visible=visible, size=(1400, 900))
     display.start()
     return display
 

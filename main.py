@@ -71,7 +71,7 @@ if __name__ == "__main__":
     helpers.create_directory('params')
 
     env = CarRacingEnv(device, seed, hyperparams['stack_frames'], hyperparams['train'])
-    display = helpers.display_start()
+    display = helpers.display_start(args.record)
     if hyperparams['train']:
         trainer = trainer_factory.build(hyperparams['strategy'], env, hyperparams)
         trainer.train()
