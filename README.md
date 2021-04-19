@@ -50,6 +50,23 @@ Here are a couple of example executions:
     ```bash
     python main.py --strategy vpg --experiment my-other-experiment --record true --heatmap true
     ```
+   
+## Running the best weights for each strategy
+
+In the `params/` folder there are the most successful weights for each strategy (`VPG`, `Baseline`, `PPO`). The following commands let you see one lap attempt with the trained model.
+
+```bash
+# REINFORCE / VPG
+python main.py --experiment final --record true --strategy vpg --action_set 4
+
+# Reinforce with Baseline
+python main.py --experiment final --record true --strategy baseline
+
+# Proximal Policy Optimization (PPO)
+python main.py --experiment final --record true --strategy ppo --action_set 4
+```
+
+**Disclaimer:** When training, make sure you change the experiment name `--experiment` to avoid overriding the weights.
 
 # Used resources
 
